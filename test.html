@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070809">
+<title>BTB — Caricature Studio</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#070809;color:#f7f7f5;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+.app{width:min(1180px,100%);margin:auto;padding:14px 16px 30px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.logo{width:42px;height:42px;border-radius:13px;background:#ffd21f;color:#08090a;display:grid;place-items:center;font-weight:900;font-size:12px}
+.brand{flex:1}.brand h1{font-size:16px;margin:0}.brand p{font-size:12px;color:#8e949e;margin:3px 0 0}
+.badge{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;border:1px solid #294b39;color:#55d894;background:#0d2117;padding:7px 10px;border-radius:999px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:22px}
+.preview-wrap{width:min(600px,100%);margin:auto}
+.stage{position:relative;aspect-ratio:3/4;background:#0d0f12;border:1px solid #292d35;border-radius:24px;overflow:hidden}
+canvas{width:100%;height:100%;display:block;object-fit:contain}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+.camera-overlay{position:absolute;inset:0;pointer-events:none}
+.grid{position:absolute;inset:0;background:linear-gradient(90deg,transparent 33.2%,#ffffff18 33.3%,transparent 33.5%,transparent 66.5%,#ffffff18 66.6%,transparent 66.8%),linear-gradient(0deg,transparent 33.2%,#ffffff18 33.3%,transparent 33.5%,transparent 66.5%,#ffffff18 66.6%,transparent 66.8%)}
+.face-guide{position:absolute;left:50%;top:12%;width:54%;height:58%;transform:translateX(-50%);border:1.5px dashed #ffffff35;border-radius:50%}
+.mode{position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.18em;color:#ffd21f;background:#070809a8;padding:7px 10px;border-radius:999px}
+.status{position:absolute;left:14px;bottom:14px;right:14px;padding:9px 12px;background:#08090ab8;border:1px solid #ffffff12;border-radius:12px;font-size:11px;color:#d7d9dd;backdrop-filter:blur(8px)}
+.controls{display:flex;align-items:center;justify-content:center;gap:24px;padding:16px 0}
+.circle{width:48px;height:48px;border-radius:50%;border:1px solid #30343c;background:#17191e;color:white;display:grid;place-items:center}
+.shutter{width:72px;height:72px;border-radius:50%;border:2px solid #fff;background:#fff;box-shadow:0 0 0 5px #ffffff20}
+.panel{background:#111317;border:1px solid #292d35;border-radius:20px;padding:18px}
+.panel h2{font-size:14px;margin:0 0 16px}
+.field{margin-bottom:16px}.field label{display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:7px}
+input[type=text]{width:100%;height:46px;background:#0c0e11;border:1px solid #292d35;border-radius:12px;color:white;padding:0 13px;outline:none}
+input[type=text]:focus{border-color:#ffd21f}
+.range-row{display:flex;gap:10px;align-items:center}
+input[type=range]{width:100%;accent-color:#ffd21f}
+.value{width:42px;text-align:right;color:#ffd21f;font-size:12px;font-weight:800}
+select{width:100%;height:44px;background:#0c0e11;border:1px solid #292d35;color:white;border-radius:12px;padding:0 12px}
+.btn{width:100%;height:48px;border:0;border-radius:13px;font-weight:800;margin-top:8px}
+.primary{background:#ffd21f;color:#090a0b}.dark{background:#191c21;border:1px solid #30343c;color:#fff}.green{background:#1e7a4d;color:white}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.note{font-size:10.5px;line-height:1.5;color:#777e89;margin-top:13px}
+.drop{border:1px dashed #3a3f49;border-radius:13px;padding:14px;text-align:center;color:#9096a0;font-size:12px}
+input[type=file]{display:none}
+.result{display:none;margin-top:12px}
+.result img{width:100%;border-radius:14px;background:#0b0d10}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.preview-wrap{width:min(520px,100%)}.panel{max-width:600px;margin:auto}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="logo">BTB</div>
+  <div class="brand"><h1>Caricature Studio</h1><p>Deterministic caricature engine · no generative AI</p></div>
+  <div class="badge">Offline Engine</div>
+</header>
+
+<div class="layout">
+<section class="preview-wrap">
+  <div class="stage">
+    <video id="video" playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <div class="camera-overlay">
+      <div class="grid" id="grid"></div>
+      <div class="face-guide" id="guide"></div>
+      <div class="mode" id="mode">READY</div>
+      <div class="status" id="status">Upload a photo or open the camera.</div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="circle" id="uploadBtn" aria-label="Upload photo">＋</button>
+    <button class="shutter" id="captureBtn" aria-label="Capture"></button>
+    <button class="circle" id="cameraBtn" aria-label="Camera">⌾</button>
+  </div>
+  <input id="file" type="file" accept="image/*">
+</section>
+
+<aside class="panel">
+<h2>Caricature Controls</h2>
+
+<div class="field">
+<label>Guest name <span>optional</span></label>
+<input id="name" type="text" maxlength="40" placeholder="Enter guest name">
+</div>
+
+<div class="field">
+<label>Head exaggeration <span id="headVal" class="value">38%</span></label>
+<div class="range-row"><input id="head" type="range" min="0" max="80" value="38"><span></span></div>
+</div>
+
+<div class="field">
+<label>Cartoon strength <span id="cartoonVal" class="value">65%</span></label>
+<div class="range-row"><input id="cartoon" type="range" min="0" max="100" value="65"><span></span></div>
+</div>
+
+<div class="field">
+<label>Edge ink <span id="inkVal" class="value">45%</span></label>
+<div class="range-row"><input id="ink" type="range" min="0" max="100" value="45"><span></span></div>
+</div>
+
+<div class="field">
+<label>Colour style</label>
+<select id="style">
+<option value="colour">BTB Colour</option>
+<option value="warm">Warm Illustration</option>
+<option value="bw">Black & White Ink</option>
+<option value="comic">Bold Comic</option>
+</select>
+</div>
+
+<div class="drop" id="faceInfo">Face box: not detected</div>
+
+<div class="row">
+<button class="btn dark" id="reset">Reset</button>
+<button class="btn primary" id="create">Create</button>
+</div>
+<button class="btn green" id="download">Download PNG</button>
+<button class="btn dark" id="print">Print</button>
+
+<p class="note">
+No image-generation API is used. Processing is performed locally with Canvas pixel operations.
+If the browser exposes its native FaceDetector, it is used only to locate the face. Otherwise the app uses a deterministic centre-face fallback.
+</p>
+</aside>
+</div>
+</div>
+
+<script>
+const video=document.getElementById('video');
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d',{willReadFrequently:true});
+const file=document.getElementById('file');
+const statusEl=document.getElementById('status');
+const modeEl=document.getElementById('mode');
+const guide=document.getElementById('guide');
+const grid=document.getElementById('grid');
+const faceInfo=document.getElementById('faceInfo');
+
+let sourceImage=null, stream=null, face=null, lastOutput=null;
+let W=900,H=1200;
+
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+function setStatus(s){statusEl.textContent=s}
+function setCanvasSize(w=W,h=H){canvas.width=w;canvas.height=h}
+
+function fitCover(srcW,srcH,dstW,dstH){
+  const scale=Math.max(dstW/srcW,dstH/srcH);
+  const dw=srcW*scale,dh=srcH*scale;
+  return {x:(dstW-dw)/2,y:(dstH-dh)/2,w:dw,h:dh};
+}
+
+async function detectFace(img){
+  face=null;
+  if('FaceDetector' in window){
+    try{
+      const detector=new FaceDetector({fastMode:true,maxDetectedFaces:1});
+      const faces=await detector.detect(img);
+      if(faces.length){
+        const b=faces[0].boundingBox;
+        const sx=W/img.naturalWidth, sy=H/img.naturalHeight;
+        face={x:b.x*sx,y:b.y*sy,w:b.width*sx,h:b.height*sy};
+      }
+    }catch(e){}
+  }
+  if(!face){
+    face={x:W*.25,y:H*.13,w:W*.5,h:H*.48};
+    faceInfo.textContent='Face box: automatic fallback';
+  }else{
+    faceInfo.textContent=`Face box: ${Math.round(face.w)} × ${Math.round(face.h)} px`;
+  }
+}
+
+function drawSource(){
+  if(!sourceImage)return;
+  setCanvasSize(W,H);
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#e8e3d9';ctx.fillRect(0,0,W,H);
+  const r=fitCover(sourceImage.naturalWidth,sourceImage.naturalHeight,W,H);
+  ctx.drawImage(sourceImage,r.x,r.y,r.w,r.h);
+}
+
+function posterize(data,levels,strength){
+  const step=255/(levels-1);
+  for(let i=0;i<data.length;i+=4){
+    data[i]=data[i]*(1-strength)+Math.round(data[i]/step)*step*strength;
+    data[i+1]=data[i+1]*(1-strength)+Math.round(data[i+1]/step)*step*strength;
+    data[i+2]=data[i+2]*(1-strength)+Math.round(data[i+2]/step)*step*strength;
+  }
+}
+
+function edgeInk(data,w,h,strength){
+  const src=new Uint8ClampedArray(data);
+  const idx=(x,y)=>(y*w+x)*4;
+  for(let y=1;y<h-1;y++){
+    for(let x=1;x<w-1;x++){
+      const i=idx(x,y);
+      const lum=(r,g,b)=>.299*r+.587*g+.114*b;
+      const gx=lum(src[idx(x+1,y)],src[idx(x+1,y)+1],src[idx(x+1,y)+2])-lum(src[idx(x-1,y)],src[idx(x-1,y)+1],src[idx(x-1,y)+2]);
+      const gy=lum(src[idx(x,y+1)],src[idx(x,y+1)+1],src[idx(x,y+1)+2])-lum(src[idx(x,y-1)],src[idx(x,y-1)+1],src[idx(x,y-1)+2]);
+      const e=clamp(Math.sqrt(gx*gx+gy*gy)*1.8,0,255)*strength;
+      data[i]=clamp(data[i]-e,0,255);
+      data[i+1]=clamp(data[i+1]-e,0,255);
+      data[i+2]=clamp(data[i+2]-e,0,255);
+    }
+  }
+}
+
+function radialWarp(src,w,h,bx,by,bw,bh,amount){
+  const out=new Uint8ClampedArray(src.length);
+  const cx=bx+bw/2,cy=by+bh*.48;
+  const rx=bw*.72,ry=bh*.72;
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      const dx=(x-cx)/rx,dy=(y-cy)/ry;
+      const d=dx*dx+dy*dy;
+      let sx=x,sy=y;
+      if(d<1){
+        const factor=1-amount*.42*(1-d);
+        sx=cx+(x-cx)*factor;
+        sy=cy+(y-cy)*factor;
+      }
+      sx=clamp(Math.round(sx),0,w-1);sy=clamp(Math.round(sy),0,h-1);
+      const si=(sy*w+sx)*4,di=(y*w+x)*4;
+      out[di]=src[si];out[di+1]=src[si+1];out[di+2]=src[si+2];out[di+3]=255;
+    }
+  }
+  return out;
+}
+
+function styleAdjust(data,style){
+  for(let i=0;i<data.length;i+=4){
+    let r=data[i],g=data[i+1],b=data[i+2];
+    if(style==='warm'){
+      r=clamp(r*1.08+8,0,255);g=clamp(g*1.02+2,0,255);b=clamp(b*.92,0,255);
+    }else if(style==='bw'){
+      const q=.299*r+.587*g+.114*b;r=g=b=q;
+    }else if(style==='comic'){
+      r=clamp(r*1.12,0,255);g=clamp(g*1.08,0,255);b=clamp(b*1.03,0,255);
+    }
+    data[i]=r;data[i+1]=g;data[i+2]=b;
+  }
+}
+
+async function createCaricature(){
+  if(!sourceImage){setStatus('Upload or capture a photo first.');return}
+  setStatus('Building deterministic caricature…');
+  modeEl.textContent='PROCESSING';
+  await detectFace(sourceImage);
+  drawSource();
+
+  let img=ctx.getImageData(0,0,W,H);
+  const head=+$('head').value/100;
+  const cartoon=+$('cartoon').value/100;
+  const ink=+$('ink').value/100;
+  const warped=radialWarp(img.data,W,H,face.x,face.y,face.w,face.h,head);
+  img.data.set(warped);
+  posterize(img.data, cartoon>.7?8:cartoon>.35?12:18, cartoon);
+  styleAdjust(img.data,$('style').value);
+  if($('style').value!=='bw') edgeInk(img.data,W,H,ink*.72);
+  ctx.putImageData(img,0,0);
+
+  // deterministic illustration accents
+  ctx.save();
+  ctx.strokeStyle=$('style').value==='bw'?'#111':'rgba(20,20,20,.35)';
+  ctx.lineWidth=Math.max(2,W/500);
+  ctx.globalAlpha=.35;
+  ctx.beginPath();
+  ctx.ellipse(face.x+face.w/2,face.y+face.h*.5,face.w*.48,face.h*.52,0,0,Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+
+  lastOutput=canvas.toDataURL('image/png');
+  modeEl.textContent='CARICATURE';
+  guide.style.display='none';grid.style.display='none';
+  setStatus('Done — generated locally. No image-generation API was used.');
+}
+
+function loadImage(src){
+  const img=new Image();
+  img.onload=async()=>{
+    sourceImage=img;
+    W=900;H=1200;
+    drawSource();
+    await detectFace(img);
+    modeEl.textContent='PHOTO';
+    guide.style.display='block';grid.style.display='block';
+    setStatus('Photo loaded. Adjust the controls and tap Create.');
+  };
+  img.src=src;
+}
+
+file.addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  loadImage(URL.createObjectURL(f));
+});
+
+$('uploadBtn').onclick=()=>file.click();
+
+$('cameraBtn').onclick=async()=>{
+  try{
+    if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;video.style.display='none';setStatus('Camera stopped.');return}
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1080},height:{ideal:1440}},audio:false});
+    video.srcObject=stream;video.style.display='block';modeEl.textContent='PHOTO';guide.style.display='block';grid.style.display='block';
+    setStatus('Camera ready. Tap the shutter.');
+  }catch(e){setStatus('Camera permission was denied or is unavailable.')}
+};
+
+$('captureBtn').onclick=()=>{
+  if(!stream){file.click();return}
+  const c=document.createElement('canvas');c.width=900;c.height=1200;
+  const cr=fitCover(video.videoWidth,video.videoHeight,c.width,c.height);
+  c.getContext('2d').drawImage(video,cr.x,cr.y,cr.w,cr.h);
+  loadImage(c.toDataURL('image/jpeg',.95));
+  stream.getTracks().forEach(t=>t.stop());stream=null;video.style.display='none';
+};
+
+['head','cartoon','ink'].forEach(id=>{
+  $(id).addEventListener('input',()=>{
+    $(id+'Val').textContent=$(id).value+'%';
+  });
+});
+
+$('create').onclick=createCaricature;
+
+$('reset').onclick=()=>{
+  lastOutput=null;sourceImage=null;face=null;ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0d0f12';ctx.fillRect(0,0,W,H);
+  modeEl.textContent='READY';guide.style.display='block';grid.style.display='block';
+  faceInfo.textContent='Face box: not detected';setStatus('Upload a photo or open the camera.');
+};
+
+$('download').onclick=()=>{
+  if(!lastOutput){setStatus('Create a caricature first.');return}
+  const a=document.createElement('a');
+  const n=($('name').value.trim()||'guest').replace(/[^a-z0-9-_]+/gi,'-').toLowerCase();
+  a.href=lastOutput;a.download=`BTB-Caricature-${n}.png`;a.click();
+};
+
+$('print').onclick=()=>{
+  if(!lastOutput){setStatus('Create a caricature first.');return}
+  const w=window.open('','_blank');
+  w.document.write(`<html><head><title>BTB Caricature</title><style>body{margin:0;display:grid;place-items:center;min-height:100vh}img{max-width:100%;max-height:100vh}</style></head><body><img src="${lastOutput}" onload="window.print()"></body></html>`);
+  w.document.close();
+};
+
+setCanvasSize();
+ctx.fillStyle='#0d0f12';ctx.fillRect(0,0,W,H);
+</script>
+</body>
+</html>
