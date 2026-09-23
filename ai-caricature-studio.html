@@ -1,0 +1,3589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070809">
+<title>BTB — AI Caricature Studio</title>
+<style>
+/* ============================================================
+   RESET / BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;}
+html,body{width:100%;max-width:100%;overflow-x:hidden;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  margin:0;
+  background:#070809;
+  color:#F7F7F5;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:15px;
+  line-height:1.4;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  min-height:100vh;
+  min-height:100dvh;
+}
+button,input,select,textarea{font:inherit;color:inherit;}
+button{cursor:pointer;background:none;border:0;}
+img,video{max-width:100%;}
+[hidden]{display:none !important;}
+:focus-visible{outline:2px solid #FFD21F;outline-offset:2px;}
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.app{
+  width:100%;
+  min-width:0;
+  max-width:1180px;
+  margin:0 auto;
+  padding:0 14px calc(22px + env(safe-area-inset-bottom));
+}
+
+/* ---------- Header ---------- */
+.topbar{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:14px 0 12px;
+  min-width:0;
+  width:100%;
+}
+.logo{
+  flex:0 0 auto;
+  width:40px;height:40px;
+  border-radius:12px;
+  background:#FFD21F;
+  color:#0A0B0D;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:12px;letter-spacing:.05em;
+  box-shadow:0 2px 14px rgba(255,210,31,.16);
+  user-select:none;
+}
+.brand{flex:1 1 auto;min-width:0;}
+.brand h1{
+  margin:0;font-size:15px;font-weight:650;letter-spacing:-.01em;line-height:1.15;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.brand p{
+  margin:3px 0 0;font-size:11.5px;color:#8E949E;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.icon-btn{
+  flex:0 0 auto;
+  width:44px;height:44px;
+  border-radius:14px;
+  background:#111317;
+  border:1px solid #292D35;
+  color:#F7F7F5;
+  display:flex;align-items:center;justify-content:center;
+  padding:0;
+  transition:background .15s,border-color .15s,transform .1s,color .15s;
+}
+.icon-btn:hover{background:#17191E;border-color:#3A3F49;}
+.icon-btn:active{transform:scale(.95);}
+
+/* ---------- Stage / layout ---------- */
+.stage{display:block;width:100%;min-width:0;}
+.capture{width:100%;min-width:0;}
+
+/* ============================================================
+   CAMERA
+   ============================================================ */
+.camera{
+  position:relative;
+  width:100%;
+  min-width:0;
+  aspect-ratio:3 / 4;
+  background:#0A0B0D;
+  border:1px solid #292D35;
+  border-radius:20px;
+  overflow:hidden;
+  isolation:isolate;
+}
+.camera video,
+.camera img.media{
+  position:absolute;
+  inset:0;
+  width:100%;height:100%;
+  object-fit:contain;
+  background:#0A0B0D;
+  display:block;
+}
+.camera video.mirror{transform:scaleX(-1);}
+.camera img.media.framed{
+  object-fit:contain;
+  background:#1A1A1A;
+}
+
+/* ---------- Grid ---------- */
+.grid{position:absolute;inset:0;z-index:2;pointer-events:none;}
+.grid i{position:absolute;background:rgba(255,255,255,.10);}
+.grid i.v{top:0;bottom:0;width:1px;}
+.grid i.h{left:0;right:0;height:1px;}
+.grid i.v1{left:33.333%;}
+.grid i.v2{left:66.666%;}
+.grid i.h1{top:33.333%;}
+.grid i.h2{top:66.666%;}
+
+/* ---------- Face guide ---------- */
+.guide{
+  position:absolute;
+  left:50%;top:13%;
+  width:52%;height:57%;
+  transform:translateX(-50%);
+  border:1.5px dashed rgba(255,255,255,.22);
+  border-radius:50%;
+  pointer-events:none;
+  z-index:2;
+}
+.helper{
+  position:absolute;
+  left:50%;bottom:14px;
+  transform:translateX(-50%);
+  z-index:3;
+  background:rgba(10,11,13,.62);
+  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.08);
+  color:rgba(247,247,245,.86);
+  font-size:10.5px;
+  letter-spacing:.01em;
+  padding:6px 11px;
+  border-radius:999px;
+  white-space:nowrap;
+  pointer-events:none;
+  max-width:calc(100% - 24px);
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* ---------- Top camera controls ---------- */
+.cam-top{
+  position:absolute;
+  top:0;left:0;right:0;
+  z-index:4;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:12px;
+}
+.cam-chip{
+  position:relative;
+  width:36px;height:36px;
+  border-radius:50%;
+  background:rgba(10,11,13,.55);
+  -webkit-backdrop-filter:blur(10px);
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.10);
+  color:#F7F7F5;
+  display:flex;align-items:center;justify-content:center;
+  padding:0;
+  transition:background .15s,color .15s,border-color .15s,transform .1s;
+}
+.cam-chip::after{content:'';position:absolute;inset:-5px;border-radius:50%;}
+.cam-chip:active{transform:scale(.93);}
+.cam-chip.on{background:#FFD21F;border-color:#FFD21F;color:#0A0B0D;}
+.cam-mode{
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.18em;
+  color:#FFD21F;
+  text-shadow:0 1px 8px rgba(0,0,0,.7);
+  user-select:none;
+}
+
+/* ---------- Empty state ---------- */
+.empty{
+  position:absolute;inset:0;
+  z-index:3;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:26px;
+}
+.empty svg{color:rgba(247,247,245,.28);}
+.empty h2{margin:16px 0 0;font-size:15px;font-weight:600;letter-spacing:-.01em;}
+.empty p{margin:6px 0 0;font-size:12.5px;color:#8E949E;max-width:210px;}
+
+/* ---------- Overlay / spinner ---------- */
+.overlay{
+  position:absolute;inset:0;
+  z-index:10;
+  background:rgba(7,8,9,.80);
+  -webkit-backdrop-filter:blur(6px);
+  backdrop-filter:blur(6px);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:26px;
+}
+.spinner{
+  width:42px;height:42px;
+  border-radius:50%;
+  border:3px solid rgba(255,255,255,.14);
+  border-top-color:#FFD21F;
+  animation:spin .9s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.overlay h3{margin:18px 0 0;font-size:14.5px;font-weight:600;}
+.overlay p{margin:7px 0 0;font-size:12px;color:#8E949E;max-width:250px;}
+
+/* ============================================================
+   BOTTOM CAMERA CONTROLS
+   ============================================================ */
+.controls{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  width:100%;
+  padding:16px 4px 2px;
+}
+.cam-btn{
+  flex:0 0 auto;
+  width:46px;height:46px;
+  border-radius:50%;
+  background:#17191E;
+  border:1px solid #292D35;
+  color:#F7F7F5;
+  display:flex;align-items:center;justify-content:center;
+  padding:0;
+  transition:background .15s,transform .1s,opacity .15s;
+}
+.cam-btn:hover:not(:disabled){background:#1E2128;}
+.cam-btn:active:not(:disabled){transform:scale(.94);}
+.cam-btn:disabled{opacity:.32;cursor:not-allowed;}
+
+.shutter{
+  flex:0 0 auto;
+  position:relative;
+  width:70px;height:70px;
+  border-radius:50%;
+  background:transparent;
+  border:0;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .15s;
+}
+.shutter .ring{
+  position:absolute;inset:0;
+  border-radius:50%;
+  border:2.5px solid rgba(255,255,255,.85);
+  transition:transform .12s,border-color .15s;
+}
+.shutter .dot{
+  width:57px;height:57px;
+  border-radius:50%;
+  background:#FFFFFF;
+  box-shadow:0 0 0 1px rgba(0,0,0,.35),0 3px 14px rgba(0,0,0,.45);
+  transition:transform .12s,background .15s;
+}
+.shutter:active:not(:disabled) .dot{transform:scale(.92);}
+.shutter:active:not(:disabled) .ring{transform:scale(.97);}
+.shutter:disabled{opacity:.4;cursor:not-allowed;}
+.shutter:disabled .dot{background:#8E949E;}
+.shutter:disabled .ring{border-color:rgba(255,255,255,.35);}
+
+/* ============================================================
+   QUEUE BAR
+   ============================================================ */
+.queue-bar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  min-width:0;
+  min-height:46px;
+  padding:10px 14px;
+  margin-top:12px;
+  background:#17191E;
+  border:1px solid #292D35;
+  border-radius:14px;
+  color:#F7F7F5;
+  font-size:13px;
+  font-weight:550;
+  text-align:left;
+  transition:background .15s,border-color .15s,transform .1s;
+}
+.queue-bar:hover{background:#1E2128;}
+.queue-bar:active{transform:scale(.99);}
+.queue-bar.done{border-color:rgba(53,212,134,.4);}
+.queue-bar.err{border-color:rgba(255,90,90,.4);}
+.queue-spinner{
+  width:16px;height:16px;
+  border-radius:50%;
+  border:2px solid rgba(255,210,31,.25);
+  border-top-color:#FFD21F;
+  animation:spin .9s linear infinite;
+  flex:0 0 auto;
+}
+.queue-dot{
+  width:10px;height:10px;border-radius:50%;
+  background:#35D486;flex:0 0 auto;
+  box-shadow:0 0 0 3px rgba(53,212,134,.15);
+}
+.queue-dot.err{background:#FF5A5A;box-shadow:0 0 0 3px rgba(255,90,90,.15);}
+.queue-text{
+  flex:1 1 auto;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.queue-bar svg{flex:0 0 auto;color:#8E949E;}
+
+/* ============================================================
+   PANELS
+   ============================================================ */
+.panel{
+  margin-top:16px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  width:100%;
+  min-width:0;
+}
+.field{display:flex;flex-direction:column;gap:7px;min-width:0;width:100%;}
+.field-label{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  font-size:12.5px;
+  font-weight:600;
+  color:#F7F7F5;
+}
+.field-label .tag{
+  font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8E949E;
+}
+.field-label .tag.warn{color:#FFD21F;}
+
+input[type=text],input[type=password],input[type=url],select,textarea{
+  width:100%;
+  min-width:0;
+  background:#111317;
+  border:1px solid #292D35;
+  border-radius:13px;
+  padding:13px 14px;
+  font-size:16px;
+  line-height:1.3;
+  color:#F7F7F5;
+  outline:none;
+  -webkit-appearance:none;
+  appearance:none;
+  transition:border-color .15s,background .15s;
+}
+textarea{resize:vertical;min-height:64px;font-size:15px;}
+input:focus,select:focus,textarea:focus{border-color:rgba(255,210,31,.5);background:#17191E;}
+input::placeholder,textarea::placeholder{color:#5C626C;}
+select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238E949E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 14px center;
+  padding-right:42px;
+}
+.readonly{
+  width:100%;
+  background:#0E1013;
+  border:1px solid #292D35;
+  border-radius:13px;
+  padding:13px 14px;
+  font-size:14px;
+  color:#8E949E;
+}
+
+.hint{margin:0;font-size:11.5px;line-height:1.45;color:#8E949E;}
+.hint.alert{color:#C9A227;}
+
+.btn{
+  width:100%;
+  min-width:0;
+  height:52px;
+  border-radius:14px;
+  border:1px solid transparent;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  font-size:15px;font-weight:650;letter-spacing:-.005em;
+  transition:transform .1s,filter .15s,background .15s,border-color .15s;
+  padding:0 16px;
+  text-align:center;
+}
+.btn:active:not(:disabled){transform:scale(.985);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn svg{flex:0 0 auto;}
+.btn-primary{background:#FFD21F;color:#0A0B0D;}
+.btn-primary:hover:not(:disabled){filter:brightness(1.05);}
+.btn-green{background:#1E7A4D;color:#EAFBF1;border-color:#2A9C63;}
+.btn-green:hover:not(:disabled){background:#238A57;}
+.btn-neutral{background:#17191E;color:#F7F7F5;border-color:#292D35;}
+.btn-neutral:hover:not(:disabled){background:#1E2128;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;min-width:0;}
+
+.link-btn{
+  display:block;
+  width:100%;
+  padding:10px 4px;
+  margin-top:2px;
+  background:none;
+  border:0;
+  color:#8E949E;
+  font-size:12.5px;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  text-align:center;
+  transition:color .15s;
+}
+.link-btn:hover{color:#F7F7F5;}
+
+/* ============================================================
+   FRAME STATUS BAR
+   ============================================================ */
+.frame-status{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  padding:10px 12px;
+  background:rgba(255,210,31,.08);
+  border:1px solid rgba(255,210,31,.25);
+  border-radius:12px;
+  color:#FFD21F;
+  font-size:12px;
+  font-weight:550;
+  min-width:0;
+}
+.frame-status svg{flex:0 0 auto;}
+.frame-status span{
+  flex:1 1 auto;
+  min-width:0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.frame-status.busy{color:#8E949E;background:rgba(142,148,158,.08);border-color:rgba(142,148,158,.25);}
+
+/* ============================================================
+   HISTORY (desktop only)
+   ============================================================ */
+.side{display:none;}
+.side h3{
+  font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:#8E949E;margin:0 0 10px;font-weight:700;
+}
+.hist-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.hist-item{
+  position:relative;
+  width:100%;
+  aspect-ratio:3 / 4;
+  border-radius:11px;
+  overflow:hidden;
+  border:1px solid #292D35;
+  background:#0A0B0D;
+  padding:0;
+  transition:border-color .15s,transform .1s;
+}
+.hist-item:hover{border-color:#3A3F49;}
+.hist-item:active{transform:scale(.97);}
+.hist-item img{width:100%;height:100%;object-fit:contain;display:block;background:#0A0B0D;}
+.hist-item span{
+  position:absolute;left:0;right:0;bottom:0;
+  padding:6px 7px 5px;
+  font-size:10px;line-height:1.2;color:#F7F7F5;text-align:left;
+  background:linear-gradient(to top,rgba(0,0,0,.82),rgba(0,0,0,0));
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.hist-empty{font-size:12px;color:#5C626C;line-height:1.5;margin:0;}
+
+/* ============================================================
+   SHEETS
+   ============================================================ */
+.backdrop{
+  position:fixed;inset:0;z-index:80;
+  background:rgba(3,4,5,.68);
+  -webkit-backdrop-filter:blur(3px);
+  backdrop-filter:blur(3px);
+  animation:fade .2s ease;
+}
+@keyframes fade{from{opacity:0;}to{opacity:1;}}
+.sheet{
+  position:fixed;
+  left:0;right:0;bottom:0;z-index:90;
+  width:100%;
+  max-height:88vh;
+  max-height:88dvh;
+  background:#111317;
+  border-top:1px solid #292D35;
+  border-radius:22px 22px 0 0;
+  display:flex;
+  flex-direction:column;
+  animation:slideUp .28s cubic-bezier(.22,.8,.3,1);
+  overflow:hidden;
+}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.sheet-grab{
+  width:38px;height:4px;border-radius:99px;background:#33383F;
+  margin:9px auto 0;flex:0 0 auto;
+}
+.sheet-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 14px 12px;
+  border-bottom:1px solid #292D35;
+  flex:0 0 auto;
+}
+.sheet-head h2{margin:0;font-size:15px;font-weight:650;letter-spacing:-.01em;}
+.sheet-head .icon-btn{width:40px;height:40px;border-radius:12px;background:transparent;border-color:transparent;}
+.sheet-head .icon-btn:hover{background:#17191E;border-color:#292D35;}
+.sheet-body{
+  padding:16px;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  min-width:0;
+}
+.sheet-foot{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  padding:13px 16px calc(15px + env(safe-area-inset-bottom));
+  border-top:1px solid #292D35;
+  flex:0 0 auto;
+}
+.chips{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{
+  min-height:44px;
+  padding:0 14px;
+  border-radius:11px;
+  background:#17191E;
+  border:1px solid #292D35;
+  color:#8E949E;
+  font-size:13px;
+  font-weight:550;
+  display:inline-flex;align-items:center;
+  transition:background .15s,border-color .15s,color .15s,transform .1s;
+}
+.chip:active{transform:scale(.97);}
+.chip[aria-pressed="true"]{
+  background:rgba(255,210,31,.10);
+  border-color:rgba(255,210,31,.45);
+  color:#FFD21F;
+}
+
+/* ============================================================
+   STYLE REFERENCE GRID
+   ============================================================ */
+.ref-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:8px;
+  width:100%;
+}
+.ref-slot{
+  position:relative;
+  width:100%;
+  aspect-ratio:1;
+  border-radius:11px;
+  background:#0E1013;
+  border:1px solid #292D35;
+  overflow:hidden;
+  padding:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:background .15s,border-color .15s;
+}
+.ref-slot img{
+  width:100%;height:100%;
+  object-fit:cover;
+  display:block;
+}
+.ref-slot.add{
+  border-style:dashed;
+  border-color:#3A3F49;
+  color:#8E949E;
+  transition:background .15s,border-color .15s,color .15s,transform .1s;
+}
+.ref-slot.add:hover{background:#1E2128;border-color:#4A505A;color:#F7F7F5;}
+.ref-slot.add:active{transform:scale(.96);}
+.ref-slot.remove-btn{
+  position:absolute;
+  top:3px;right:3px;
+  width:22px;height:22px;
+  border-radius:50%;
+  background:rgba(7,8,9,.88);
+  border:1px solid rgba(255,255,255,.2);
+  color:#F7F7F5;
+  display:flex;align-items:center;justify-content:center;
+  padding:0;
+  z-index:2;
+  transition:background .15s;
+}
+.ref-slot.remove-btn:hover{background:rgba(255,90,90,.9);}
+.ref-slot .ref-num{
+  position:absolute;
+  top:3px;left:3px;
+  width:18px;height:18px;
+  border-radius:50%;
+  background:rgba(7,8,9,.85);
+  border:1px solid rgba(255,210,31,.5);
+  color:#FFD21F;
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;
+  font-weight:700;
+  z-index:2;
+}
+.ref-empty-note{
+  font-size:11px;
+  color:#5C626C;
+  line-height:1.45;
+  margin:0;
+  text-align:left;
+}
+
+/* ============================================================
+   FRAME UPLOAD UI
+   ============================================================ */
+.frame-upload{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  width:100%;
+  min-width:0;
+}
+.frame-upload-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  min-height:48px;
+  padding:0 14px;
+  border-radius:11px;
+  background:#17191E;
+  border:1px dashed #3A3F49;
+  color:#8E949E;
+  font-size:13px;
+  font-weight:550;
+  transition:background .15s,border-color .15s,color .15s,transform .1s;
+}
+.frame-upload-btn:hover{background:#1E2128;border-color:#4A505A;color:#F7F7F5;}
+.frame-upload-btn:active{transform:scale(.99);}
+
+.frame-preview{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px;
+  background:#0E1013;
+  border:1px solid #292D35;
+  border-radius:11px;
+  min-width:0;
+}
+.frame-preview img{
+  width:56px;
+  height:74px;
+  object-fit:contain;
+  background:
+    linear-gradient(45deg, #2A2A2A 25%, transparent 25%),
+    linear-gradient(-45deg, #2A2A2A 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #2A2A2A 75%),
+    linear-gradient(-45deg, transparent 75%, #2A2A2A 75%);
+  background-size:8px 8px;
+  background-position:0 0, 0 4px, 4px -4px, -4px 0px;
+  background-color:#1A1A1A;
+  border-radius:6px;
+  flex:0 0 auto;
+  border:1px solid #292D35;
+}
+.frame-preview-info{flex:1 1 auto;min-width:0;}
+.frame-preview-info strong{
+  display:block;font-size:13px;font-weight:600;color:#F7F7F5;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.frame-preview-info small{
+  display:block;font-size:11px;color:#8E949E;margin-top:3px;
+}
+.frame-preview-actions{
+  display:flex;flex-direction:column;gap:6px;flex:0 0 auto;
+}
+.frame-mini-btn{
+  min-height:36px;
+  padding:0 12px;
+  border-radius:9px;
+  background:#17191E;
+  border:1px solid #292D35;
+  color:#F7F7F5;
+  font-size:12px;
+  font-weight:550;
+  transition:background .15s,transform .1s;
+}
+.frame-mini-btn:hover{background:#1E2128;}
+.frame-mini-btn:active{transform:scale(.96);}
+.frame-mini-btn.adjust{
+  background:rgba(255,210,31,.12);
+  border-color:rgba(255,210,31,.4);
+  color:#FFD21F;
+}
+.frame-mini-btn.adjust:hover{background:rgba(255,210,31,.18);}
+.frame-mini-btn.remove{
+  background:rgba(255,90,90,.10);
+  border-color:rgba(255,90,90,.30);
+  color:#FF8A8A;
+}
+.frame-mini-btn.remove:hover{background:rgba(255,90,90,.18);}
+
+/* ============================================================
+   FRAME EDITOR
+   ============================================================ */
+.frame-editor{
+  position:fixed;inset:0;z-index:120;
+  background:#070809;
+  display:flex;
+  flex-direction:column;
+  animation:fade .2s ease;
+}
+.frame-editor-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding:16px;
+  border-bottom:1px solid #292D35;
+  flex:0 0 auto;
+}
+.frame-editor-head-text{flex:1 1 auto;min-width:0;}
+.frame-editor-head h3{
+  margin:0;font-size:15px;font-weight:650;letter-spacing:-.01em;color:#F7F7F5;
+}
+.frame-editor-head p{
+  margin:5px 0 0;font-size:12px;color:#8E949E;line-height:1.4;
+}
+.frame-editor-stage{
+  flex:1 1 auto;
+  min-height:0;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  touch-action:none;
+  padding:0;
+}
+.frame-editor-inner{position:relative;line-height:0;}
+.frame-editor-inner img{
+  display:block;
+  user-select:none;
+  -webkit-user-drag:none;
+  pointer-events:none;
+}
+.window-rect{
+  position:absolute;
+  border:2px solid #FFD21F;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.66);
+  cursor:move;
+  touch-action:none;
+  box-sizing:border-box;
+  z-index:2;
+}
+.window-rect::before{
+  content:'Photo area';
+  position:absolute;
+  top:-24px;left:0;
+  font-size:9.5px;
+  color:#FFD21F;
+  font-weight:700;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  background:rgba(0,0,0,.7);
+  padding:3px 7px;
+  border-radius:5px;
+  white-space:nowrap;
+  pointer-events:none;
+}
+.window-rect::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(to right, transparent calc(50% - 0.5px), rgba(255,210,31,.35) calc(50% - 0.5px), rgba(255,210,31,.35) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(to bottom, transparent calc(50% - 0.5px), rgba(255,210,31,.35) calc(50% - 0.5px), rgba(255,210,31,.35) calc(50% + 0.5px), transparent calc(50% + 0.5px));
+  pointer-events:none;
+  opacity:.6;
+}
+.window-handle{
+  position:absolute;
+  width:22px;height:22px;
+  background:#FFD21F;
+  border:2px solid #0A0B0D;
+  border-radius:50%;
+  touch-action:none;
+  z-index:3;
+  box-shadow:0 2px 8px rgba(0,0,0,.5);
+}
+.window-handle::after{
+  content:'';
+  position:absolute;
+  inset:-10px;
+  border-radius:50%;
+}
+.window-handle.tl{top:-11px;left:-11px;cursor:nwse-resize;}
+.window-handle.tr{top:-11px;right:-11px;cursor:nesw-resize;}
+.window-handle.bl{bottom:-11px;left:-11px;cursor:nesw-resize;}
+.window-handle.br{bottom:-11px;right:-11px;cursor:nwse-resize;}
+.window-handle.tm{top:-11px;left:50%;transform:translateX(-50%);cursor:ns-resize;}
+.window-handle.bm{bottom:-11px;left:50%;transform:translateX(-50%);cursor:ns-resize;}
+.window-handle.lm{top:50%;left:-11px;transform:translateY(-50%);cursor:ew-resize;}
+.window-handle.rm{top:50%;right:-11px;transform:translateY(-50%);cursor:ew-resize;}
+.frame-editor-foot{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  padding:13px 16px calc(15px + env(safe-area-inset-bottom));
+  border-top:1px solid #292D35;
+  flex:0 0 auto;
+}
+
+/* ============================================================
+   QUEUE ITEMS
+   ============================================================ */
+.jobs{display:flex;flex-direction:column;gap:10px;}
+.job{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px;
+  background:#0E1013;
+  border:1px solid #292D35;
+  border-radius:13px;
+  min-width:0;
+}
+.job-thumb{
+  width:46px;height:61px;
+  border-radius:8px;
+  object-fit:cover;
+  background:#0A0B0D;
+  flex:0 0 auto;
+  border:1px solid #292D35;
+}
+.job-info{flex:1 1 auto;min-width:0;}
+.job-info strong{
+  display:block;font-size:13.5px;font-weight:600;color:#F7F7F5;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.job-info span{
+  display:block;font-size:11.5px;color:#8E949E;margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.job-info span.ok{color:#35D486;}
+.job-info span.err{color:#FF8A8A;}
+.job-actions{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;}
+.job-action{
+  min-height:36px;
+  padding:0 12px;
+  border-radius:9px;
+  background:#17191E;
+  border:1px solid #292D35;
+  color:#F7F7F5;
+  font-size:12.5px;
+  font-weight:550;
+  transition:background .15s,transform .1s;
+}
+.job-action:hover{background:#1E2128;}
+.job-action:active{transform:scale(.96);}
+.job-action.primary{
+  background:rgba(255,210,31,.12);
+  border-color:rgba(255,210,31,.4);
+  color:#FFD21F;
+}
+.job-action.primary:hover{background:rgba(255,210,31,.18);}
+
+.empty-note{
+  font-size:12.5px;
+  color:#5C626C;
+  line-height:1.5;
+  margin:0;
+  text-align:center;
+  padding:24px 8px;
+}
+
+/* ============================================================
+   FLASH OVERLAY
+   ============================================================ */
+.flash-overlay{
+  position:fixed;inset:0;z-index:300;
+  background:#fff;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .07s ease;
+}
+.flash-overlay.on{opacity:.96;}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:calc(22px + env(safe-area-inset-bottom));
+  transform:translate(-50%,16px);
+  z-index:200;
+  max-width:calc(100vw - 32px);
+  background:#1C1F25;
+  border:1px solid #292D35;
+  color:#F7F7F5;
+  font-size:13px;
+  line-height:1.35;
+  padding:11px 16px;
+  border-radius:12px;
+  text-align:center;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease,transform .2s ease;
+  box-shadow:0 12px 34px rgba(0,0,0,.55);
+}
+.toast.show{opacity:1;transform:translate(-50%,0);}
+.toast.ok{border-color:rgba(53,212,134,.45);}
+.toast.err{border-color:rgba(255,90,90,.4);}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (min-width:768px){
+  .app{padding:0 22px calc(28px + env(safe-area-inset-bottom));}
+  .topbar{padding:18px 0 16px;}
+  .stage{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 250px;
+    gap:24px;
+    align-items:start;
+  }
+  .capture{max-width:470px;margin:0 auto;}
+  .side{display:block;position:sticky;top:20px;}
+  .camera{border-radius:22px;}
+  .controls{padding:18px 6px 2px;}
+
+  .sheet{
+    left:50%;right:auto;bottom:auto;
+    top:50%;
+    transform:translate(-50%,-50%);
+    width:520px;
+    max-width:calc(100vw - 40px);
+    max-height:min(86vh,760px);
+    border-radius:22px;
+    border:1px solid #292D35;
+    animation:pop .2s ease;
+  }
+  @keyframes pop{from{opacity:0;transform:translate(-50%,-48%) scale(.98);}to{opacity:1;transform:translate(-50%,-50%) scale(1);}}
+  .sheet-grab{display:none;}
+  .sheet-head{padding:16px 18px 13px;}
+  .sheet-body{padding:18px;}
+  .sheet-foot{padding:14px 18px 18px;}
+
+  .frame-editor-head{padding:20px 24px;}
+  .frame-editor-foot{padding:16px 24px 20px;}
+}
+
+@media (min-width:1024px){
+  .stage{grid-template-columns:minmax(0,1fr) 280px;gap:32px;}
+  .capture{max-width:520px;}
+}
+
+/* ============================================================
+   PRINT
+   ============================================================ */
+.print-area{display:none;}
+@media print{
+  html,body{
+    background:#fff !important;
+    overflow:visible !important;
+    height:auto !important;
+  }
+  .app,.sheet,.backdrop,.toast,.flash-overlay,.frame-editor{display:none !important;}
+  .print-area{display:block !important;width:100%;}
+  .print-area img{
+    display:block;margin:0 auto;
+    max-width:100%;
+    max-height:calc(100vh - 20mm);
+    width:auto;height:auto;
+    object-fit:contain;
+  }
+  @page{margin:10mm;}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ================= HEADER ================= -->
+  <header class="topbar">
+    <div class="logo" aria-hidden="true">BTB</div>
+    <div class="brand">
+      <h1>AI Caricature Studio</h1>
+      <p>Capture a guest &bull; Create a keepsake</p>
+    </div>
+    <button class="icon-btn" id="settingsBtn" type="button" aria-label="Settings">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- ================= STAGE ================= -->
+  <main class="stage">
+
+    <section class="capture" aria-label="Camera">
+
+      <!-- ---------- CAMERA ---------- -->
+      <div class="camera" id="camera">
+        <video id="video" playsinline muted autoplay></video>
+        <img class="media" id="frozen" alt="" hidden>
+        <img class="media" id="resultImg" alt="" hidden>
+
+        <div class="grid" id="grid" hidden aria-hidden="true">
+          <i class="v v1"></i><i class="v v2"></i>
+          <i class="h h1"></i><i class="h h2"></i>
+        </div>
+
+        <div class="guide" id="guide" hidden aria-hidden="true"></div>
+
+        <div class="cam-top" id="camTop" hidden>
+          <button class="cam-chip" id="flashBtn" type="button" aria-label="Flash" aria-pressed="false">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </button>
+          <span class="cam-mode">PHOTO</span>
+          <button class="cam-chip" id="flipBtn" type="button" aria-label="Switch camera">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 2v6h-6"/>
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+              <path d="M3 22v-6h6"/>
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="helper" id="helper" hidden>Keep head + shoulders inside</div>
+
+        <div class="empty" id="empty">
+          <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 8.6A2.6 2.6 0 0 1 5.6 6h1.1a2 2 0 0 0 1.7-.95l.5-.8A1.5 1.5 0 0 1 10.2 3.5h3.6a1.5 1.5 0 0 1 1.3.75l.5.8A2 2 0 0 0 17.3 6h1.1A2.6 2.6 0 0 1 21 8.6v9A2.6 2.6 0 0 1 18.4 20H5.6A2.6 2.6 0 0 1 3 17.6z"/>
+            <circle cx="12" cy="13" r="3.4"/>
+          </svg>
+          <h2>Ready for the guest</h2>
+          <p>Tap the shutter to open the camera</p>
+        </div>
+
+        <div class="overlay" id="frameLoading" hidden>
+          <div class="spinner" aria-hidden="true"></div>
+          <h3>Applying frame</h3>
+          <p>Rendering at print resolution&hellip;</p>
+        </div>
+      </div>
+
+      <!-- ---------- BOTTOM CONTROLS ---------- -->
+      <div class="controls">
+        <button class="cam-btn" id="galleryBtn" type="button" aria-label="Choose photo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2.6"/>
+            <circle cx="8.6" cy="8.6" r="1.6"/>
+            <path d="m21 15.5-4.6-4.6L5 21"/>
+          </svg>
+        </button>
+
+        <button class="shutter" id="shutterBtn" type="button" aria-label="Take photo">
+          <span class="ring" aria-hidden="true"></span>
+          <span class="dot" aria-hidden="true"></span>
+        </button>
+
+        <button class="cam-btn" id="resetBtn" type="button" aria-label="Start over" disabled>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="1 4 1 10 7 10"/>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+          </svg>
+        </button>
+
+        <input type="file" id="fileInput" accept="image/*" hidden>
+      </div>
+
+      <!-- ---------- QUEUE BAR ---------- -->
+      <button class="queue-bar" id="queueBar" type="button" hidden aria-label="View creations">
+        <span class="queue-spinner" id="queueSpinner" aria-hidden="true"></span>
+        <span class="queue-dot" id="queueDot" aria-hidden="true" hidden></span>
+        <span class="queue-text" id="queueText">Creating…</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+
+      <!-- ---------- NAME + CREATE ---------- -->
+      <div class="panel" id="namePanel" hidden>
+        <div class="field">
+          <label class="field-label" for="guestName">
+            <span>Guest name</span>
+            <span class="tag">Required</span>
+          </label>
+          <input id="guestName" type="text" placeholder="Enter guest name" autocomplete="off"
+                 autocapitalize="words" spellcheck="false" maxlength="40" enterkeyhint="done">
+        </div>
+        <button class="btn btn-primary" id="createBtn" type="button">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3.2 13.85 9 19.6 10.85 13.85 12.7 12 18.5 10.15 12.7 4.4 10.85 10.15 9z"/>
+            <path d="M18.6 3.4v3.2M20.2 5h-3.2"/>
+          </svg>
+          Create caricature
+        </button>
+      </div>
+
+      <!-- ---------- RESULT ACTIONS ---------- -->
+      <div class="panel" id="resultPanel" hidden>
+        <div class="frame-status" id="frameStatus" hidden>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2.5"/>
+            <rect x="7" y="7" width="10" height="10" rx="1"/>
+          </svg>
+          <span id="frameStatusText">Framed</span>
+        </div>
+
+        <div class="row2">
+          <button class="btn btn-green" id="downloadBtn" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download
+          </button>
+          <button class="btn btn-neutral" id="printBtn" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 6 2.5 18 2.5 18 9"/>
+              <path d="M6 18H4.5A2.5 2.5 0 0 1 2 15.5v-4A2.5 2.5 0 0 1 4.5 9h15A2.5 2.5 0 0 1 22 11.5v4A2.5 2.5 0 0 1 19.5 18H18"/>
+              <rect x="6" y="14" width="12" height="8" rx="1"/>
+            </svg>
+            Print
+          </button>
+        </div>
+        <button class="link-btn" id="sourceToggle" type="button" hidden>View original photo</button>
+      </div>
+
+    </section>
+
+    <!-- ---------- HISTORY (desktop) ---------- -->
+    <aside class="side" aria-label="Recent caricatures">
+      <h3>Recent</h3>
+      <div class="hist-grid" id="histGrid"></div>
+      <p class="hist-empty" id="histEmpty">No caricatures yet.</p>
+    </aside>
+
+  </main>
+</div>
+
+<!-- ================= SETTINGS ================= -->
+<div class="backdrop" id="backdrop" hidden></div>
+
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+  <div class="sheet-grab" aria-hidden="true"></div>
+
+  <header class="sheet-head">
+    <h2 id="sheetTitle">Settings</h2>
+    <button class="icon-btn" id="closeSettings" type="button" aria-label="Close settings">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="sheet-body">
+
+    <div class="field">
+      <label class="field-label" for="setProvider"><span>Provider</span></label>
+      <select id="setProvider">
+        <option value="openai">OpenAI</option>
+        <option value="custom">Custom (OpenAI-compatible)</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="setKey">
+        <span>API key</span>
+        <span class="tag warn">Required</span>
+      </label>
+      <input id="setKey" type="password" placeholder="sk-…" autocomplete="off" spellcheck="false">
+      <p class="hint alert">Your API key is stored in this browser. Anyone with access to this device may be able to inspect it.</p>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="setModel"><span>Model</span></label>
+      <input id="setModel" type="text" placeholder="gpt-image-1" spellcheck="false" autocomplete="off">
+      <p class="hint">Use <strong>gpt-image-1</strong> to send style references. DALL·E 2 only accepts a single image.</p>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="setEndpoint"><span>Custom endpoint</span></label>
+      <input id="setEndpoint" type="url" placeholder="https://api.openai.com/v1" spellcheck="false" autocomplete="off" inputmode="url">
+      <p class="hint">Base URL, or a full <code>/images/edits</code> path.</p>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span>Output</span></label>
+      <div class="readonly">Portrait 3:4</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="setQuality"><span>Quality</span></label>
+      <select id="setQuality">
+        <option value="auto">Auto</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span>Style</span></label>
+      <div class="chips" id="styleChips">
+        <button class="chip" type="button" data-style="classic" aria-pressed="true">Classic Colourful</button>
+        <button class="chip" type="button" data-style="digital" aria-pressed="false">Premium Digital</button>
+        <button class="chip" type="button" data-style="ink" aria-pressed="false">Black &amp; White Ink</button>
+        <button class="chip" type="button" data-style="comic" aria-pressed="false">Bold Comic</button>
+        <button class="chip" type="button" data-style="minimal" aria-pressed="false">Minimal Clean</button>
+      </div>
+    </div>
+
+    <!-- ===================================================
+         STYLE REFERENCES
+         =================================================== -->
+    <div class="field">
+      <label class="field-label">
+        <span>Style references</span>
+        <span class="tag" id="refCountTag">0 / 5</span>
+      </label>
+      <p class="hint">Upload up to 5 caricature examples. The AI will match their artistic style (exaggeration, line work, colour, mood) while keeping the guest's identity.</p>
+      <div class="ref-grid" id="refGrid"></div>
+      <p class="ref-empty-note" id="refEmptyNote">No references yet. Tap + to upload a sample caricature.</p>
+      <input type="file" id="refFileInput" accept="image/*" hidden multiple>
+    </div>
+
+    <!-- ===================================================
+         PRINT FRAME
+         =================================================== -->
+    <div class="field">
+      <label class="field-label">
+        <span>Print frame</span>
+        <span class="tag">A4 / A5</span>
+      </label>
+      <div class="chips" id="frameSizeChips">
+        <button class="chip" type="button" data-frame="none" aria-pressed="true">None</button>
+        <button class="chip" type="button" data-frame="a5" aria-pressed="false">A5 (148×210mm)</button>
+        <button class="chip" type="button" data-frame="a4" aria-pressed="false">A4 (210×297mm)</button>
+      </div>
+      <p class="hint">Photos are rendered at 300 DPI for print quality.</p>
+    </div>
+
+    <div class="field" id="frameUploadField" hidden>
+      <label class="field-label">
+        <span>Branded frame image</span>
+        <span class="tag">Optional</span>
+      </label>
+      <div class="frame-upload">
+        <button class="frame-upload-btn" id="uploadFrameBtn" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span>Upload frame image</span>
+        </button>
+        <div class="frame-preview" id="framePreview" hidden>
+          <img id="frameThumb" alt="">
+          <div class="frame-preview-info">
+            <strong id="frameFileName">Custom frame</strong>
+            <small id="frameFileSize">Transparent PNG recommended</small>
+          </div>
+          <div class="frame-preview-actions">
+            <button class="frame-mini-btn adjust" id="adjustFrameBtn" type="button">Adjust area</button>
+            <button class="frame-mini-btn remove" id="removeFrameBtn" type="button">Remove</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Upload a PNG with your event branding. After uploading, mark the photo area inside the frame.</p>
+      <input type="file" id="frameFileInput" accept="image/png,image/webp,image/*" hidden>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="setExtra">
+        <span>Additional instruction</span>
+        <span class="tag">Optional</span>
+      </label>
+      <textarea id="setExtra" rows="2" placeholder="e.g. Add a party hat" spellcheck="false"></textarea>
+    </div>
+
+  </div>
+
+  <div class="sheet-foot">
+    <button class="btn btn-neutral" id="testBtn" type="button">Test API</button>
+    <button class="btn btn-primary" id="saveBtn" type="button">Save</button>
+  </div>
+</section>
+
+<!-- ================= FRAME EDITOR ================= -->
+<section class="frame-editor" id="frameEditor" role="dialog" aria-modal="true" aria-labelledby="frameEditorTitle" hidden>
+  <header class="frame-editor-head">
+    <div class="frame-editor-head-text">
+      <h3 id="frameEditorTitle">Select photo area</h3>
+      <p>Drag the yellow rectangle to match the opening in your frame. Use the handles to resize.</p>
+    </div>
+    <button class="icon-btn" id="frameEditorClose" type="button" aria-label="Close frame editor">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="frame-editor-stage" id="frameEditorStage">
+    <div class="frame-editor-inner" id="frameEditorInner">
+      <img id="frameEditorImg" alt="">
+      <div class="window-rect" id="windowRect">
+        <div class="window-handle tl" data-handle="tl"></div>
+        <div class="window-handle tr" data-handle="tr"></div>
+        <div class="window-handle bl" data-handle="bl"></div>
+        <div class="window-handle br" data-handle="br"></div>
+        <div class="window-handle tm" data-handle="tm"></div>
+        <div class="window-handle bm" data-handle="bm"></div>
+        <div class="window-handle lm" data-handle="lm"></div>
+        <div class="window-handle rm" data-handle="rm"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame-editor-foot">
+    <button class="btn btn-neutral" id="frameEditorReset" type="button">Auto-detect</button>
+    <button class="btn btn-primary" id="frameEditorSave" type="button">Save area</button>
+  </div>
+</section>
+
+<!-- ================= QUEUE SHEET ================= -->
+<section class="sheet" id="queueSheet" role="dialog" aria-modal="true" aria-labelledby="queueTitle" hidden>
+  <div class="sheet-grab" aria-hidden="true"></div>
+
+  <header class="sheet-head">
+    <h2 id="queueTitle">Creations</h2>
+    <button class="icon-btn" id="closeQueue" type="button" aria-label="Close creations">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="sheet-body">
+    <div class="jobs" id="jobsList"></div>
+    <p class="empty-note" id="jobsEmpty">Nothing in progress. Captured photos and finished caricatures appear here.</p>
+  </div>
+
+  <div class="sheet-foot">
+    <button class="btn btn-neutral" id="clearQueue" type="button">Clear finished</button>
+    <button class="btn btn-primary" id="closeQueueBtn" type="button">Done</button>
+  </div>
+</section>
+
+<!-- ================= PRINT ================= -->
+<div class="print-area" id="printArea">
+  <img id="printImg" alt="">
+</div>
+
+<!-- ================= FLASH OVERLAY ================= -->
+<div class="flash-overlay" id="flashOverlay" aria-hidden="true"></div>
+
+<!-- ================= TOAST ================= -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     CONSTANTS
+     ============================================================ */
+  var LS_SETTINGS = 'btb.settings.v1';
+  var LS_HISTORY  = 'btb.history.v1';
+  var LS_REFS     = 'btb.styleRefs.v1';
+  var MAX_HISTORY = 8;
+  var THUMB_WIDTH = 720;
+  var SOURCE_THUMB_WIDTH = 480;
+  var FRAME_MAX_DIM = 1200;
+  var MAX_STYLE_REFS = 5;
+  var REF_MAX_DIM = 640;
+
+  var FRAME_SIZES = {
+    none: null,
+    a5: { w: 1748, h: 2480, label: 'A5' },
+    a4: { w: 2480, h: 3508, label: 'A4' }
+  };
+
+  var DEFAULT_FRAME_WINDOW = { x: 0.10, y: 0.10, w: 0.80, h: 0.80 };
+
+  var DEFAULT_SETTINGS = {
+    provider: 'openai',
+    apiKey: '',
+    model: 'gpt-image-1',
+    endpoint: 'https://api.openai.com/v1',
+    quality: 'auto',
+    style: 'classic',
+    extra: '',
+    frameSize: 'none',
+    frameImage: '',
+    frameWindow: Object.assign({}, DEFAULT_FRAME_WINDOW)
+  };
+
+  /* ---------- Playful, funny, cute style lines ---------- */
+  var STYLE_PROMPTS = {
+    classic: 'ARTISTIC STYLE — CLASSIC COLOURFUL EVENT CARICATURE: exaggerated but lovable, big head and small body, oversized grin, twinkling eyes, expressive eyebrows, playful posture. Vibrant saturated marker colours, confident ink outlines, cheerful simple background, warm skin tones. The guest should laugh out loud when they see it — funny, kind, flattering and instantly recognisable as themselves.',
+    digital: 'ARTISTIC STYLE — PREMIUM DIGITAL CARICATURE: polished airbrushed shading, soft cinematic lighting, semi-realistic but clearly caricatured proportions (slightly oversized head, exaggerated smile, playful sparkle in the eyes). Rich colours, refined detail. Funny and cute like a high-end theme-park portrait, never mean.',
+    ink:     'ARTISTIC STYLE — BLACK & WHITE INK CARICATURE: joyful hand-drawn pen-and-ink linework, expressive cross-hatching, soft greyscale washes. Exaggerated features — big smile, lively eyes, oversized ears or nose if that is the guest\'s distinctive feature. Warm and friendly newspaper-cartoon energy. Crisp white paper background.',
+    comic:   'ARTISTIC STYLE — BOLD COMIC-BOOK CARICATURE: thick confident outlines, flat cel-shaded colours, halftone dot accents, dynamic pop-art energy. Superhero-style exaggerated proportions — huge grin, wide sparkling eyes, heroic chin or big hair. Fun, cute and larger-than-life.',
+    minimal: 'ARTISTIC STYLE — MINIMAL CLEAN CARICATURE: simple confident line art, limited flat colour palette, generous negative space. Still playful — oversized head, funny little smile, cute dot eyes or signature expression. Modern editorial cartoon, warm and charming.'
+  };
+
+  /* ============================================================
+     DOM
+     ============================================================ */
+  var $ = function (id) { return document.getElementById(id); };
+
+  var video       = $('video');
+  var frozen      = $('frozen');
+  var resultImg   = $('resultImg');
+  var camera      = $('camera');
+  var grid        = $('grid');
+  var guide       = $('guide');
+  var helper      = $('helper');
+  var camTop      = $('camTop');
+  var flashBtn    = $('flashBtn');
+  var flipBtn     = $('flipBtn');
+  var emptyEl     = $('empty');
+  var frameLoading= $('frameLoading');
+
+  var galleryBtn  = $('galleryBtn');
+  var shutterBtn  = $('shutterBtn');
+  var resetBtn    = $('resetBtn');
+  var fileInput   = $('fileInput');
+
+  var queueBar    = $('queueBar');
+  var queueText   = $('queueText');
+  var queueSpinner= $('queueSpinner');
+  var queueDot    = $('queueDot');
+
+  var namePanel   = $('namePanel');
+  var guestName   = $('guestName');
+  var createBtn   = $('createBtn');
+
+  var resultPanel = $('resultPanel');
+  var downloadBtn = $('downloadBtn');
+  var printBtn    = $('printBtn');
+  var sourceToggle= $('sourceToggle');
+  var frameStatus = $('frameStatus');
+  var frameStatusText = $('frameStatusText');
+
+  var histGrid    = $('histGrid');
+  var histEmpty   = $('histEmpty');
+
+  var settingsBtn = $('settingsBtn');
+  var backdrop    = $('backdrop');
+  var sheet       = $('sheet');
+  var closeBtn    = $('closeSettings');
+  var saveBtn     = $('saveBtn');
+  var testBtn     = $('testBtn');
+
+  var setProvider = $('setProvider');
+  var setKey      = $('setKey');
+  var setModel    = $('setModel');
+  var setEndpoint = $('setEndpoint');
+  var setQuality  = $('setQuality');
+  var setExtra    = $('setExtra');
+  var styleChips  = $('styleChips');
+
+  /* Style references */
+  var refGrid      = $('refGrid');
+  var refCountTag  = $('refCountTag');
+  var refEmptyNote = $('refEmptyNote');
+  var refFileInput = $('refFileInput');
+
+  /* Frame */
+  var frameSizeChips  = $('frameSizeChips');
+  var frameUploadField= $('frameUploadField');
+  var uploadFrameBtn  = $('uploadFrameBtn');
+  var frameFileInput  = $('frameFileInput');
+  var framePreview    = $('framePreview');
+  var frameThumb      = $('frameThumb');
+  var frameFileName   = $('frameFileName');
+  var frameFileSize   = $('frameFileSize');
+  var adjustFrameBtn  = $('adjustFrameBtn');
+  var removeFrameBtn  = $('removeFrameBtn');
+
+  /* Frame editor */
+  var frameEditor      = $('frameEditor');
+  var frameEditorStage = $('frameEditorStage');
+  var frameEditorInner = $('frameEditorInner');
+  var frameEditorImg   = $('frameEditorImg');
+  var windowRect       = $('windowRect');
+  var frameEditorClose = $('frameEditorClose');
+  var frameEditorReset = $('frameEditorReset');
+  var frameEditorSave  = $('frameEditorSave');
+
+  var queueSheet  = $('queueSheet');
+  var closeQueue  = $('closeQueue');
+  var closeQueueBtn = $('closeQueueBtn');
+  var clearQueue  = $('clearQueue');
+  var jobsList    = $('jobsList');
+  var jobsEmpty   = $('jobsEmpty');
+
+  var toastEl     = $('toast');
+  var printImg    = $('printImg');
+  var flashOverlay= $('flashOverlay');
+
+  /* ============================================================
+     STATE
+     ============================================================ */
+  var state = {
+    mode: 'idle',
+    stream: null,
+    facing: 'environment',
+    flashOn: false,
+    torchActive: false,
+    captureDataUrl: null,
+    currentSource: null,
+    currentResult: null,
+    currentFramed: null,
+    currentFramedSource: null,
+    viewMode: 'framed',
+    guestName: '',
+    history: [],
+    styleRefs: [],           /* [{ id, image }] */
+    settings: Object.assign({}, DEFAULT_SETTINGS),
+    jobs: [],
+    processingJob: null,
+    cameras: [],
+    cameraIndex: -1,
+    frameRenderToken: 0,
+    _frameCacheKey: null
+  };
+
+  var frameEditorState = {
+    img: null,
+    displayW: 0,
+    displayH: 0,
+    win: { x: 0.1, y: 0.1, w: 0.8, h: 0.8 },
+    dragging: null
+  };
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  var show = function (el, on) { if (el) { el.hidden = !on; } };
+
+  var toastTimer = null;
+  function toast(msg, kind) {
+    if (!toastEl) { return; }
+    toastEl.textContent = msg;
+    toastEl.className = 'toast show' + (kind === 'ok' ? ' ok' : kind === 'err' ? ' err' : '');
+    if (toastTimer) { clearTimeout(toastTimer); }
+    toastTimer = setTimeout(function () { toastEl.className = 'toast'; }, 4000);
+  }
+
+  function loadImage(src) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () { resolve(img); };
+      img.onerror = function () { reject(new Error('Image failed to load')); };
+      img.src = src;
+    });
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onload = function () { resolve(String(fr.result)); };
+      fr.onerror = function () { reject(new Error('Could not read image data')); };
+      fr.readAsDataURL(blob);
+    });
+  }
+
+  function dataUrlToBlob(dataUrl) {
+    return fetch(dataUrl).then(function (r) { return r.blob(); });
+  }
+
+  async function urlToDataUrl(url) {
+    var res = await fetch(url);
+    if (!res.ok) { throw new Error('Could not download the generated image'); }
+    var blob = await res.blob();
+    return blobToDataUrl(blob);
+  }
+
+  function sanitizeFilename(name) {
+    var s = String(name || '').trim()
+      .replace(/[^\w\s\-]+/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    if (!s) { s = 'Guest'; }
+    return s.slice(0, 40);
+  }
+
+  function extractApiMessage(text) {
+    if (!text) { return ''; }
+    try {
+      var j = JSON.parse(text);
+      if (j && j.error && j.error.message) { return String(j.error.message).slice(0, 180); }
+      if (j && j.message) { return String(j.message).slice(0, 180); }
+    } catch (e) { /* not json */ }
+    return String(text).replace(/\s+/g, ' ').slice(0, 180);
+  }
+
+  function genId() {
+    return 'j' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) { return bytes + ' B'; }
+    if (bytes < 1024 * 1024) { return Math.round(bytes / 1024) + ' KB'; }
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function dataUrlBytes(dataUrl) {
+    if (!dataUrl) { return 0; }
+    var idx = dataUrl.indexOf(',');
+    if (idx < 0) { return 0; }
+    return Math.floor((dataUrl.length - idx - 1) * 0.75);
+  }
+
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+  function normalizeFrameWindow(w) {
+    if (!w || typeof w !== 'object') { return Object.assign({}, DEFAULT_FRAME_WINDOW); }
+    var out = {
+      x: clamp(Number(w.x) || 0, 0, 1),
+      y: clamp(Number(w.y) || 0, 0, 1),
+      w: clamp(Number(w.w) || 0.5, 0.05, 1),
+      h: clamp(Number(w.h) || 0.5, 0.05, 1)
+    };
+    if (out.x + out.w > 1) { out.w = 1 - out.x; }
+    if (out.y + out.h > 1) { out.h = 1 - out.y; }
+    return out;
+  }
+
+  /* ============================================================
+     SETTINGS PERSISTENCE
+     ============================================================ */
+  function loadSettings() {
+    try {
+      var raw = localStorage.getItem(LS_SETTINGS);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          state.settings = Object.assign({}, DEFAULT_SETTINGS, parsed);
+          state.settings.frameWindow = normalizeFrameWindow(state.settings.frameWindow);
+        }
+      }
+    } catch (e) { state.settings = Object.assign({}, DEFAULT_SETTINGS); }
+  }
+
+  function persistSettings() {
+    try {
+      localStorage.setItem(LS_SETTINGS, JSON.stringify(state.settings));
+      return true;
+    } catch (e) {
+      try {
+        var fallback = Object.assign({}, state.settings);
+        fallback.frameImage = '';
+        localStorage.setItem(LS_SETTINGS, JSON.stringify(fallback));
+        state.settings.frameImage = '';
+        toast('Frame too large to save — kept for this session only', 'err');
+        return false;
+      } catch (e2) {
+        toast('Settings could not be saved in this browser', 'err');
+        return false;
+      }
+    }
+  }
+
+  /* ============================================================
+     STYLE REFERENCES PERSISTENCE
+     ============================================================ */
+  function loadStyleRefs() {
+    try {
+      var raw = localStorage.getItem(LS_REFS);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          state.styleRefs = parsed
+            .filter(function (it) { return it && it.image; })
+            .slice(0, MAX_STYLE_REFS);
+        }
+      }
+    } catch (e) { state.styleRefs = []; }
+  }
+
+  function persistStyleRefs() {
+    var list = state.styleRefs.slice(0, MAX_STYLE_REFS);
+    while (true) {
+      try {
+        localStorage.setItem(LS_REFS, JSON.stringify(list));
+        state.styleRefs = list;
+        return true;
+      } catch (e) {
+        if (list.length <= 1) {
+          try { localStorage.removeItem(LS_REFS); } catch (e2) { /* ignore */ }
+          state.styleRefs = [];
+          toast('Storage full — style references cleared', 'err');
+          renderStyleRefs();
+          return false;
+        }
+        list.pop();
+      }
+    }
+  }
+
+  /* ============================================================
+     HISTORY PERSISTENCE
+     ============================================================ */
+  function loadHistory() {
+    try {
+      var raw = localStorage.getItem(LS_HISTORY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          state.history = parsed
+            .filter(function (it) { return it && it.image && it.name; })
+            .slice(0, MAX_HISTORY);
+        }
+      }
+    } catch (e) { state.history = []; }
+  }
+
+  function persistHistory() {
+    var list = state.history.slice(0, MAX_HISTORY);
+    while (true) {
+      try {
+        localStorage.setItem(LS_HISTORY, JSON.stringify(list));
+        state.history = list;
+        return;
+      } catch (e) {
+        if (list.length <= 1) {
+          try { localStorage.removeItem(LS_HISTORY); } catch (e2) { /* ignore */ }
+          state.history = [];
+          toast('Browser storage is full — history was cleared', 'err');
+          return;
+        }
+        list.pop();
+      }
+    }
+  }
+
+  /* ============================================================
+     CAMERAS
+     ============================================================ */
+  async function refreshCameras() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+      state.cameras = [];
+      state.cameraIndex = -1;
+      return;
+    }
+    try {
+      var devices = await navigator.mediaDevices.enumerateDevices();
+      state.cameras = devices.filter(function (d) { return d.kind === 'videoinput'; });
+      if (state.stream) {
+        var track = state.stream.getVideoTracks()[0];
+        var st = track && track.getSettings ? track.getSettings() : null;
+        if (st && st.deviceId) {
+          for (var i = 0; i < state.cameras.length; i++) {
+            if (state.cameras[i].deviceId === st.deviceId) {
+              state.cameraIndex = i;
+              break;
+            }
+          }
+        }
+      }
+      if (state.cameraIndex < 0 && state.cameras.length) { state.cameraIndex = 0; }
+    } catch (e) {
+      state.cameras = [];
+      state.cameraIndex = -1;
+    }
+  }
+
+  function stopCamera() {
+    if (state.stream) {
+      try { state.stream.getTracks().forEach(function (t) { t.stop(); }); }
+      catch (e) { /* ignore */ }
+      state.stream = null;
+    }
+    try { video.srcObject = null; } catch (e) { /* ignore */ }
+    state.torchActive = false;
+  }
+
+  function cameraErrorMessage(err) {
+    var name = (err && err.name) || '';
+    if (name === 'NotAllowedError' || name === 'SecurityError') {
+      return 'Camera permission denied. Enable camera access in your browser settings.';
+    }
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      return 'No camera found on this device.';
+    }
+    if (name === 'NotReadableError' || name === 'TrackStartError') {
+      return 'Camera is in use by another app.';
+    }
+    if (name === 'OverconstrainedError') {
+      return 'This camera does not support the requested format.';
+    }
+    return 'Unable to start the camera.';
+  }
+
+  async function startCamera(deviceId) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast('Camera is not supported in this browser', 'err');
+      return false;
+    }
+    stopCamera();
+    setMode('idle');
+
+    var facing = state.facing;
+    var attempts;
+    if (deviceId) {
+      attempts = [
+        { audio: false, video: { deviceId: { exact: deviceId }, width: { ideal: 1440 }, height: { ideal: 1920 }, aspectRatio: { ideal: 0.75 } } },
+        { audio: false, video: { deviceId: { exact: deviceId } } }
+      ];
+    } else {
+      attempts = [
+        { audio: false, video: { facingMode: { ideal: facing }, width: { ideal: 1440 }, height: { ideal: 1920 }, aspectRatio: { ideal: 0.75 } } },
+        { audio: false, video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 1706 } } },
+        { audio: false, video: { facingMode: { ideal: facing } } },
+        { audio: false, video: true }
+      ];
+    }
+
+    var stream = null;
+    var lastErr = null;
+    for (var i = 0; i < attempts.length; i++) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(attempts[i]);
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (err && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) {
+          toast(cameraErrorMessage(err), 'err');
+          return false;
+        }
+      }
+    }
+    if (!stream) {
+      toast(cameraErrorMessage(lastErr), 'err');
+      return false;
+    }
+
+    state.stream = stream;
+    video.srcObject = stream;
+
+    var track = stream.getVideoTracks()[0];
+    var st = track && track.getSettings ? track.getSettings() : {};
+    var isFront = (st && st.facingMode === 'user') || (state.facing === 'user' && !deviceId);
+    video.classList.toggle('mirror', !!isFront);
+    state.facing = isFront ? 'user' : (st.facingMode || state.facing);
+
+    try { await video.play(); } catch (e) { /* ignore */ }
+    setMode('live');
+    refreshCameras();
+    return true;
+  }
+
+  async function toggleFlash() {
+    state.flashOn = !state.flashOn;
+    flashBtn.classList.toggle('on', state.flashOn);
+    flashBtn.setAttribute('aria-pressed', state.flashOn ? 'true' : 'false');
+
+    if (!state.flashOn) {
+      if (state.stream && state.torchActive) {
+        try {
+          var track = state.stream.getVideoTracks()[0];
+          if (track && track.applyConstraints) {
+            await track.applyConstraints({ advanced: [{ torch: false }] });
+          }
+        } catch (e) { /* ignore */ }
+      }
+      state.torchActive = false;
+      return;
+    }
+
+    if (state.mode === 'live' && state.stream) {
+      try {
+        var t = state.stream.getVideoTracks()[0];
+        var caps = t && t.getCapabilities ? t.getCapabilities() : null;
+        if (caps && caps.torch) {
+          await t.applyConstraints({ advanced: [{ torch: true }] });
+          state.torchActive = true;
+          toast('Flash on', 'ok');
+          return;
+        }
+      } catch (e) { /* fall through */ }
+    }
+    state.torchActive = false;
+    toast('Flash on (screen flash)');
+  }
+
+  async function screenFlash() {
+    return new Promise(function (resolve) {
+      flashOverlay.classList.add('on');
+      setTimeout(function () { resolve(); }, 70);
+    });
+  }
+  function screenFlashOff() { flashOverlay.classList.remove('on'); }
+
+  async function cycleCamera() {
+    if (!state.cameras.length) {
+      state.facing = state.facing === 'environment' ? 'user' : 'environment';
+      state.flashOn = false;
+      flashBtn.classList.remove('on');
+      flashBtn.setAttribute('aria-pressed', 'false');
+      if (state.mode === 'live' || state.mode === 'idle') { await startCamera(); }
+      return;
+    }
+    state.cameraIndex = (state.cameraIndex + 1) % state.cameras.length;
+    var cam = state.cameras[state.cameraIndex];
+    var label = cam.label || ('Camera ' + (state.cameraIndex + 1));
+    state.flashOn = false;
+    flashBtn.classList.remove('on');
+    flashBtn.setAttribute('aria-pressed', 'false');
+    await startCamera(cam.deviceId);
+    toast(label);
+  }
+
+  /* ============================================================
+     3:4 CAPTURE
+     ============================================================ */
+  function drawToCanvas(src, sw, sh) {
+    var TARGET = 3 / 4;
+    var cw, ch;
+    if (sw / sh > TARGET) { cw = sw; ch = Math.round(sw / TARGET); }
+    else { ch = sh; cw = Math.round(sh * TARGET); }
+
+    var MAX = 1400;
+    var longest = Math.max(cw, ch);
+    if (longest > MAX) {
+      var k = MAX / longest;
+      cw = Math.max(1, Math.round(cw * k));
+      ch = Math.max(1, Math.round(ch * k));
+    }
+
+    var canvas = document.createElement('canvas');
+    canvas.width = cw;
+    canvas.height = ch;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0A0B0D';
+    ctx.fillRect(0, 0, cw, ch);
+
+    try {
+      ctx.save();
+      if ('filter' in ctx) { ctx.filter = 'blur(26px)'; }
+      var cover = Math.max(cw / sw, ch / sh) * 1.18;
+      var bw = sw * cover, bh = sh * cover;
+      ctx.drawImage(src, (cw - bw) / 2, (ch - bh) / 2, bw, bh);
+      ctx.restore();
+    } catch (e) { /* ignore */ }
+
+    var fit = Math.min(cw / sw, ch / sh);
+    var dw = sw * fit, dh = sh * fit;
+    ctx.drawImage(src, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+    return canvas;
+  }
+
+  async function captureFromVideo() {
+    if (!video.videoWidth || !video.videoHeight) { toast('Camera is not ready yet'); return; }
+
+    var useScreenFlash = state.flashOn && !state.torchActive;
+    if (useScreenFlash) {
+      await screenFlash();
+      await new Promise(function (r) { setTimeout(r, 60); });
+    }
+
+    var canvas = drawToCanvas(video, video.videoWidth, video.videoHeight);
+    state.captureDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    frozen.src = state.captureDataUrl;
+    stopCamera();
+
+    if (useScreenFlash) { await screenFlashOff(); }
+
+    guestName.value = '';
+    setMode('captured');
+  }
+
+  async function useUploadedFile(file) {
+    if (!file.type || file.type.indexOf('image/') !== 0) {
+      toast('Please choose an image file', 'err');
+      return;
+    }
+    var url = null;
+    try {
+      url = URL.createObjectURL(file);
+      var img = await loadImage(url);
+      var canvas = drawToCanvas(img, img.naturalWidth, img.naturalHeight);
+      state.captureDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      frozen.src = state.captureDataUrl;
+      stopCamera();
+      guestName.value = '';
+      setMode('captured');
+    } catch (e) {
+      toast('Could not read that image', 'err');
+    } finally {
+      if (url) { URL.revokeObjectURL(url); }
+    }
+  }
+
+  /* ============================================================
+     MODE
+     ============================================================ */
+  function setMode(mode) {
+    state.mode = mode;
+    var live = mode === 'live';
+    var captured = mode === 'captured';
+    var result = mode === 'result';
+    var idle = mode === 'idle';
+
+    show(video, live);
+    show(frozen, captured);
+    show(resultImg, result);
+    show(emptyEl, idle);
+    show(camTop, live);
+    show(grid, live);
+    show(guide, live);
+    show(helper, live);
+    show(namePanel, captured);
+    show(resultPanel, result);
+
+    galleryBtn.disabled = false;
+    shutterBtn.disabled = captured;
+    resetBtn.disabled = idle;
+
+    if (result) { shutterBtn.setAttribute('aria-label', 'New guest'); }
+    else if (live) { shutterBtn.setAttribute('aria-label', 'Take photo'); }
+    else { shutterBtn.setAttribute('aria-label', 'Open camera'); }
+
+    if (live) { try { video.play(); } catch (e) { /* ignore */ } }
+  }
+
+  function resetAll() {
+    stopCamera();
+    state.captureDataUrl = null;
+    state.currentSource = null;
+    state.currentResult = null;
+    state.currentFramed = null;
+    state.currentFramedSource = null;
+    state.viewMode = 'framed';
+    state.guestName = '';
+    state.flashOn = false;
+    flashBtn.classList.remove('on');
+    flashBtn.setAttribute('aria-pressed', 'false');
+    frozen.removeAttribute('src');
+    resultImg.removeAttribute('src');
+    resultImg.alt = '';
+    guestName.value = '';
+    show(sourceToggle, false);
+    show(frameStatus, false);
+    setMode('idle');
+  }
+
+  async function newGuest() {
+    resetAll();
+    await startCamera();
+  }
+
+  /* ============================================================
+     PROMPT
+     ============================================================ */
+  function buildPrompt(settings, refCount) {
+    var styleLine = STYLE_PROMPTS[settings.style] || STYLE_PROMPTS.classic;
+    var hasRefs = refCount > 0;
+
+    var parts = [];
+
+    if (hasRefs) {
+      parts.push(
+        'You are given MULTIPLE images.',
+        '',
+        'IMAGE 1 — SOURCE PHOTO: the exact guest to caricature. This is the ONLY real person in the output.',
+        '',
+        'IMAGES 2' + (refCount > 1 ? ('–' + (refCount + 1)) : '') + ' — STYLE REFERENCES: caricature examples showing the artistic style to emulate — drawing technique, line weight, exaggeration level, colour palette, mood, background treatment.',
+        '',
+        'CRITICAL RULE FOR STYLE REFERENCES:',
+        'DO NOT copy any face, identity, hairstyle, skin tone, gender, age, clothing, jewellery or specific facial feature from the reference images. Use them ONLY to understand the artistic STYLE.',
+        'The subject in the output MUST be the guest from IMAGE 1, rendered in the style shown by the reference images.',
+        ''
+      );
+    }
+
+    parts.push(
+      'Create a FUNNY, CUTE and FAITHFUL caricature of THE EXACT PERSON in the source photo.',
+      'The source photo is the source of truth for identity. The output must be unmistakably the same person, just exaggerated for comedy.',
+      '',
+      'IDENTITY LOCK — preserve exactly:',
+      '- exact face shape',
+      '- eyes, eyebrows, nose, lips, ears',
+      '- skin tone',
+      '- hairstyle and hairline',
+      '- facial hair',
+      '- apparent age and gender',
+      '- clothing and clothing colours',
+      '- distinctive facial characteristics',
+      '',
+      'Do NOT:',
+      '- invent or substitute a different person',
+      '- create a generic face',
+      '- beautify the person into someone else',
+      '- change gender, age, hairstyle or clothing',
+      '- add another person or another face',
+      '',
+      'TRANSFORMATION LOCK — the supplied person must remain the same person. Only the artistic rendering may change.',
+      '',
+      'CARICATURE ENERGY — the output MUST feel like a real hand-drawn event caricature:',
+      '- exaggerate the most distinctive features in a flattering, funny way',
+      '- slightly larger head, smaller body — classic caricature proportions',
+      '- oversized smile, sparkling eyes, expressive eyebrows, playful posture',
+      '- if the guest has a signature feature (big nose, curly hair, big ears, beard, glasses, strong chin), exaggerate it in a loving, funny way',
+      '- cute, friendly, warm, approachable — the guest should laugh and love it. NEVER mean, scary or unflattering.',
+      '- vibrant colours, clean bold outlines, cheerful background',
+      '',
+      styleLine,
+      '',
+      'COMPOSITION LOCK — one person only. Keep the complete head, hair, ears, chin, both sides of the face and shoulders inside the portrait 3:4 frame.',
+      'Do NOT crop the subject. Do NOT cut off hair, forehead, ears or chin. Leave generous padding.',
+      'If the source is a close-up, extend the background instead of cropping the subject.',
+      '',
+      'The final image must look like a professionally hand-created event caricature of this exact guest.',
+      'No text. No watermark. No extra people. No extra face. High-resolution print quality.'
+    );
+
+    if (settings.extra && String(settings.extra).trim()) {
+      parts.push('');
+      parts.push('ADDITIONAL ARTISTIC DIRECTION (must not alter the identity of the person): ' + String(settings.extra).trim());
+    }
+
+    return parts.join('\n');
+  }
+
+  /* ============================================================
+     PROVIDER INTEGRATION
+     ============================================================ */
+  function resolveEditUrl(settings) {
+    var base = String(settings.endpoint || '').trim() || 'https://api.openai.com/v1';
+    base = base.replace(/\/+$/, '');
+    if (/\/images\/edits$/i.test(base)) { return base; }
+    return base + '/images/edits';
+  }
+
+  function resolveModelsUrl(settings) {
+    var base = String(settings.endpoint || '').trim() || 'https://api.openai.com/v1';
+    base = base.replace(/\/+$/, '');
+    if (/\/models$/i.test(base)) { return base; }
+    if (/\/images\/edits$/i.test(base)) { return base.replace(/\/images\/edits$/i, '/models'); }
+    return base + '/models';
+  }
+
+  async function requestImageEdit(url, opts) {
+    var settings = opts.settings;
+    var model = String(settings.model || 'gpt-image-1').trim() || 'gpt-image-1';
+    var isDalle2 = /dall-e-2/i.test(model);
+
+    var blob;
+    try { blob = await dataUrlToBlob(opts.imageDataUrl); }
+    catch (e) { throw new Error('Could not prepare the reference photo'); }
+
+    /* Gather valid style references */
+    var refs = (state.styleRefs || []).filter(function (r) { return r && r.image; });
+
+    var form = new FormData();
+    form.append('model', model);
+
+    if (isDalle2) {
+      /* DALL·E 2 only supports a single image — ignore references */
+      form.append('image', blob, 'guest.png');
+    } else if (refs.length === 0) {
+      /* No references: single image upload (max compatibility) */
+      form.append('image', blob, 'guest.png');
+    } else {
+      /* gpt-image-1: multi-image array. Image 1 = guest, images 2+ = style refs. */
+      form.append('image[]', blob, 'guest.png');
+      for (var i = 0; i < refs.length; i++) {
+        try {
+          var refBlob = await dataUrlToBlob(refs[i].image);
+          form.append('image[]', refBlob, 'style-ref-' + (i + 1) + '.png');
+        } catch (e) { /* skip broken ref */ }
+      }
+    }
+
+    form.append('prompt', buildPrompt(settings, isDalle2 ? 0 : refs.length));
+    form.append('n', '1');
+
+    if (isDalle2) {
+      form.append('size', '1024x1024');
+      form.append('response_format', 'b64_json');
+    } else {
+      form.append('size', '1024x1536');
+      var q = String(settings.quality || 'auto').toLowerCase();
+      if (q && q !== 'auto') { form.append('quality', q); }
+    }
+
+    var res;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + settings.apiKey },
+        body: form
+      });
+    } catch (e) {
+      throw new Error('Network error — could not reach the image API');
+    }
+
+    if (!res.ok) {
+      var text = '';
+      try { text = await res.text(); } catch (e) { text = ''; }
+      var detail = extractApiMessage(text);
+      if (res.status === 401) { throw new Error('Invalid API key. Check it in Settings.'); }
+      if (res.status === 429) { throw new Error('Rate limit or quota reached on your API account.'); }
+      throw new Error('API error ' + res.status + (detail ? ' — ' + detail : ''));
+    }
+
+    var json;
+    try { json = await res.json(); }
+    catch (e) { throw new Error('Invalid response from the image API'); }
+
+    var item = json && json.data && json.data[0];
+    if (!item) { throw new Error('The API returned no image'); }
+
+    if (item.b64_json) { return 'data:image/png;base64,' + item.b64_json; }
+    if (item.url) { return await urlToDataUrl(item.url); }
+    throw new Error('Invalid image response from the API');
+  }
+
+  function callOpenAI(opts) { return requestImageEdit(resolveEditUrl(opts.settings), opts); }
+  function callCustomProvider(opts) { return requestImageEdit(resolveEditUrl(opts.settings), opts); }
+  function callProvider(opts) {
+    var provider = opts.settings.provider || 'openai';
+    switch (provider) {
+      case 'custom': return callCustomProvider(opts);
+      case 'openai':
+      default:       return callOpenAI(opts);
+    }
+  }
+
+  /* ============================================================
+     FRAME RENDERING
+     ============================================================ */
+  async function buildFramedImage(sourceDataUrl, settingsOverride) {
+    var s = settingsOverride || state.settings;
+    var size = FRAME_SIZES[s.frameSize];
+    if (!size) { return sourceDataUrl; }
+
+    var sourceImg = await loadImage(sourceDataUrl);
+
+    var frameImg = null;
+    if (s.frameImage) {
+      try { frameImg = await loadImage(s.frameImage); } catch (e) { frameImg = null; }
+    }
+
+    var canvas = document.createElement('canvas');
+    canvas.width = size.w;
+    canvas.height = size.h;
+    var ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, size.w, size.h);
+
+    var win = normalizeFrameWindow(s.frameWindow);
+    var winX = win.x * size.w;
+    var winY = win.y * size.h;
+    var winW = win.w * size.w;
+    var winH = win.h * size.h;
+
+    if (!frameImg) {
+      winX = size.w * 0.05;
+      winY = size.h * 0.05;
+      winW = size.w * 0.90;
+      winH = size.h * 0.90;
+    }
+
+    var winAspect = winW / winH;
+    var imgAspect = sourceImg.naturalWidth / sourceImg.naturalHeight;
+    var drawW, drawH;
+    if (imgAspect > winAspect) {
+      drawH = winH;
+      drawW = winH * imgAspect;
+    } else {
+      drawW = winW;
+      drawH = winW / imgAspect;
+    }
+    var drawX = winX + (winW - drawW) / 2;
+    var drawY = winY + (winH - drawH) / 2;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(winX, winY, winW, winH);
+    ctx.clip();
+    ctx.drawImage(sourceImg, drawX, drawY, drawW, drawH);
+    ctx.restore();
+
+    if (frameImg) {
+      var frameCanvas = document.createElement('canvas');
+      frameCanvas.width = size.w;
+      frameCanvas.height = size.h;
+      var fctx = frameCanvas.getContext('2d');
+      fctx.drawImage(frameImg, 0, 0, size.w, size.h);
+      fctx.globalCompositeOperation = 'destination-out';
+      fctx.fillStyle = '#000';
+      fctx.fillRect(winX, winY, winW, winH);
+      fctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(frameCanvas, 0, 0);
+    }
+
+    return canvas.toDataURL('image/jpeg', 0.94);
+  }
+
+  async function refreshFramedView() {
+    if (state.mode !== 'result') { return; }
+    if (!state.currentResult) { return; }
+
+    var token = ++state.frameRenderToken;
+    var size = FRAME_SIZES[state.settings.frameSize];
+
+    if (!size) {
+      state.currentFramed = null;
+      state.currentFramedSource = null;
+      show(frameStatus, false);
+      if (state.viewMode === 'framed') { state.viewMode = 'raw'; }
+      applyResultView();
+      return;
+    }
+
+    var cacheKey = state.settings.frameSize + '|' +
+                   JSON.stringify(state.settings.frameWindow) + '|' +
+                   (state.settings.frameImage ? 'y' : 'n');
+
+    if (state.currentFramed && state.currentFramedSource === state.currentResult &&
+        state._frameCacheKey === cacheKey) {
+      applyResultView();
+      return;
+    }
+
+    show(frameLoading, true);
+    show(frameStatus, true);
+    frameStatus.classList.add('busy');
+    frameStatusText.textContent = 'Applying ' + size.label + ' frame…';
+
+    try {
+      var framed = await buildFramedImage(state.currentResult, state.settings);
+      if (token !== state.frameRenderToken) { return; }
+
+      state.currentFramed = framed;
+      state.currentFramedSource = state.currentResult;
+      state._frameCacheKey = cacheKey;
+
+      frameStatus.classList.remove('busy');
+      frameStatusText.textContent = size.label + ' frame ready · 300 DPI' +
+        (state.settings.frameImage ? ' · custom branded' : '');
+      state.viewMode = 'framed';
+      applyResultView();
+    } catch (e) {
+      if (token !== state.frameRenderToken) { return; }
+      frameStatus.classList.remove('busy');
+      frameStatusText.textContent = 'Frame rendering failed';
+      toast('Could not apply the frame', 'err');
+    } finally {
+      if (token === state.frameRenderToken) { show(frameLoading, false); }
+    }
+  }
+
+  function applyResultView() {
+    if (state.mode !== 'result') { return; }
+    var url = null;
+
+    if (state.viewMode === 'source' && state.currentSource) {
+      url = state.currentSource;
+      resultImg.classList.remove('framed');
+      resultImg.alt = 'Original photo of ' + state.guestName;
+      show(sourceToggle, true);
+      sourceToggle.textContent = state.currentFramed ? 'View framed caricature' : 'View caricature';
+      if (url) { resultImg.src = url; }
+      return;
+    }
+
+    if (state.viewMode === 'framed' && state.currentFramed) {
+      url = state.currentFramed;
+      resultImg.classList.add('framed');
+      resultImg.alt = 'Framed caricature of ' + state.guestName;
+    } else {
+      url = state.currentResult;
+      resultImg.classList.remove('framed');
+      resultImg.alt = 'Caricature of ' + state.guestName;
+    }
+
+    if (url) { resultImg.src = url; }
+
+    if (state.currentSource) {
+      show(sourceToggle, true);
+      if (state.viewMode === 'source') {
+        sourceToggle.textContent = state.currentFramed ? 'View framed caricature' : 'View caricature';
+      } else {
+        sourceToggle.textContent = 'View original photo';
+      }
+    } else {
+      show(sourceToggle, false);
+    }
+  }
+
+  function toggleSourceView() {
+    if (!state.currentSource) { return; }
+    if (state.viewMode === 'source') {
+      state.viewMode = state.currentFramed ? 'framed' : 'raw';
+    } else {
+      state.viewMode = 'source';
+    }
+    applyResultView();
+  }
+
+  /* ============================================================
+     FRAME WINDOW DETECTION
+     ============================================================ */
+  function detectFrameWindowFromImage(img) {
+    var c = document.createElement('canvas');
+    var W = Math.min(320, img.naturalWidth);
+    var H = Math.min(320, img.naturalHeight);
+    c.width = W; c.height = H;
+    var ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0, W, H);
+
+    var data;
+    try { data = ctx.getImageData(0, 0, W, H).data; }
+    catch (e) { return null; }
+
+    function isTransparent(x, y) { return data[(y * W + x) * 4 + 3] < 30; }
+    function isLight(x, y) {
+      var i = (y * W + x) * 4;
+      return data[i] > 215 && data[i + 1] > 215 && data[i + 2] > 215;
+    }
+
+    function bfs(pred) {
+      var cx = Math.floor(W / 2);
+      var cy = Math.floor(H / 2);
+      if (!pred(cx, cy)) { return null; }
+      var visited = new Uint8Array(W * H);
+      var stack = [cx, cy];
+      var minX = cx, maxX = cx, minY = cy, maxY = cy;
+      while (stack.length) {
+        var y = stack.pop();
+        var x = stack.pop();
+        var idx = y * W + x;
+        if (visited[idx]) { continue; }
+        visited[idx] = 1;
+        if (x < minX) { minX = x; }
+        if (x > maxX) { maxX = x; }
+        if (y < minY) { minY = y; }
+        if (y > maxY) { maxY = y; }
+        if (x > 0 && pred(x - 1, y)) { stack.push(x - 1, y); }
+        if (x < W - 1 && pred(x + 1, y)) { stack.push(x + 1, y); }
+        if (y > 0 && pred(x, y - 1)) { stack.push(x, y - 1); }
+        if (y < H - 1 && pred(x, y + 1)) { stack.push(x, y + 1); }
+      }
+      return normalizeFrameWindow({
+        x: minX / W,
+        y: minY / H,
+        w: (maxX - minX + 1) / W,
+        h: (maxY - minY + 1) / H
+      });
+    }
+
+    var w1 = null;
+    try { w1 = bfs(isTransparent); } catch (e) { w1 = null; }
+    if (w1 && w1.w > 0.15 && w1.h > 0.15) { return w1; }
+
+    var w2 = null;
+    try { w2 = bfs(isLight); } catch (e) { w2 = null; }
+    if (w2 && w2.w > 0.15 && w2.h > 0.15) { return w2; }
+    return null;
+  }
+
+  /* ============================================================
+     FRAME EDITOR
+     ============================================================ */
+  function layoutFrameEditor() {
+    var stage = frameEditorStage;
+    var img = frameEditorImg;
+    if (!img || !img.naturalWidth) { return; }
+
+    var pad = 20;
+    var availW = Math.max(10, stage.clientWidth - pad * 2);
+    var availH = Math.max(10, stage.clientHeight - pad * 2);
+    var aspect = img.naturalWidth / img.naturalHeight;
+
+    var dispW, dispH;
+    if (availW / availH > aspect) {
+      dispH = availH;
+      dispW = dispH * aspect;
+    } else {
+      dispW = availW;
+      dispH = dispW / aspect;
+    }
+
+    frameEditorState.displayW = dispW;
+    frameEditorState.displayH = dispH;
+
+    frameEditorInner.style.width = dispW + 'px';
+    frameEditorInner.style.height = dispH + 'px';
+    img.style.width = dispW + 'px';
+    img.style.height = dispH + 'px';
+
+    updateWindowRectUI();
+  }
+
+  function updateWindowRectUI() {
+    var win = frameEditorState.win;
+    var W = frameEditorState.displayW;
+    var H = frameEditorState.displayH;
+    if (!W || !H) { return; }
+    windowRect.style.left = (win.x * W) + 'px';
+    windowRect.style.top = (win.y * H) + 'px';
+    windowRect.style.width = (win.w * W) + 'px';
+    windowRect.style.height = (win.h * H) + 'px';
+  }
+
+  async function openFrameEditor() {
+    if (!state.settings.frameImage) {
+      toast('Upload a frame first', 'err');
+      return;
+    }
+
+    show(frameEditor, true);
+    document.body.style.overflow = 'hidden';
+
+    frameEditorState.win = normalizeFrameWindow(state.settings.frameWindow);
+    frameEditorState.dragging = null;
+
+    try {
+      var img = await loadImage(state.settings.frameImage);
+      frameEditorState.img = img;
+      frameEditorImg.src = state.settings.frameImage;
+      requestAnimationFrame(function () { layoutFrameEditor(); });
+    } catch (e) {
+      toast('Could not open the frame editor', 'err');
+      closeFrameEditor(false);
+    }
+  }
+
+  function closeFrameEditor(save) {
+    if (save) { state.settings.frameWindow = normalizeFrameWindow(frameEditorState.win); }
+    show(frameEditor, false);
+    document.body.style.overflow = '';
+  }
+
+  async function autoDetectFrameWindow() {
+    if (!frameEditorState.img) { return; }
+    var detected = detectFrameWindowFromImage(frameEditorState.img);
+    if (detected) {
+      frameEditorState.win = detected;
+      updateWindowRectUI();
+      toast('Detected photo area', 'ok');
+    } else {
+      frameEditorState.win = Object.assign({}, DEFAULT_FRAME_WINDOW);
+      updateWindowRectUI();
+      toast('Could not auto-detect — adjust manually');
+    }
+  }
+
+  function setupFrameEditorInteractions() {
+    var handles = windowRect.querySelectorAll('.window-handle');
+    for (var i = 0; i < handles.length; i++) {
+      (function (h) {
+        h.addEventListener('pointerdown', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          beginDrag('resize-' + h.getAttribute('data-handle'), e);
+        });
+      })(handles[i]);
+    }
+
+    windowRect.addEventListener('pointerdown', function (e) {
+      if (e.target && e.target.classList && e.target.classList.contains('window-handle')) { return; }
+      e.preventDefault();
+      e.stopPropagation();
+      beginDrag('move', e);
+    });
+
+    windowRect.addEventListener('touchstart', function (e) { e.preventDefault(); }, { passive: false });
+  }
+
+  function beginDrag(type, e) {
+    frameEditorState.dragging = {
+      type: type,
+      startX: e.clientX,
+      startY: e.clientY,
+      startWin: Object.assign({}, frameEditorState.win),
+      pointerId: e.pointerId
+    };
+    try { e.target.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    document.addEventListener('pointermove', onDragMove);
+    document.addEventListener('pointerup', onDragEnd);
+    document.addEventListener('pointercancel', onDragEnd);
+  }
+
+  function onDragMove(e) {
+    var d = frameEditorState.dragging;
+    if (!d) { return; }
+    e.preventDefault();
+
+    var W = frameEditorState.displayW;
+    var H = frameEditorState.displayH;
+    if (!W || !H) { return; }
+
+    var dx = (e.clientX - d.startX) / W;
+    var dy = (e.clientY - d.startY) / H;
+    var sw = d.startWin;
+    var next = { x: sw.x, y: sw.y, w: sw.w, h: sw.h };
+
+    if (d.type === 'move') {
+      next.x = clamp(sw.x + dx, 0, 1 - sw.w);
+      next.y = clamp(sw.y + dy, 0, 1 - sw.h);
+    } else {
+      var minW = 0.05, minH = 0.05;
+      var right = sw.x + sw.w;
+      var bottom = sw.y + sw.h;
+
+      if (d.type.indexOf('tl') >= 0) {
+        var nx = clamp(sw.x + dx, 0, right - minW);
+        next.x = nx; next.w = right - nx;
+        var ny = clamp(sw.y + dy, 0, bottom - minH);
+        next.y = ny; next.h = bottom - ny;
+      } else if (d.type.indexOf('tr') >= 0) {
+        var ny2 = clamp(sw.y + dy, 0, bottom - minH);
+        next.y = ny2; next.h = bottom - ny2;
+        next.w = clamp(sw.w + dx, minW, 1 - sw.x);
+      } else if (d.type.indexOf('bl') >= 0) {
+        var nx2 = clamp(sw.x + dx, 0, right - minW);
+        next.x = nx2; next.w = right - nx2;
+        next.h = clamp(sw.h + dy, minH, 1 - sw.y);
+      } else if (d.type.indexOf('br') >= 0) {
+        next.w = clamp(sw.w + dx, minW, 1 - sw.x);
+        next.h = clamp(sw.h + dy, minH, 1 - sw.y);
+      } else if (d.type.indexOf('tm') >= 0) {
+        var ny3 = clamp(sw.y + dy, 0, bottom - minH);
+        next.y = ny3; next.h = bottom - ny3;
+      } else if (d.type.indexOf('bm') >= 0) {
+        next.h = clamp(sw.h + dy, minH, 1 - sw.y);
+      } else if (d.type.indexOf('lm') >= 0) {
+        var nx3 = clamp(sw.x + dx, 0, right - minW);
+        next.x = nx3; next.w = right - nx3;
+      } else if (d.type.indexOf('rm') >= 0) {
+        next.w = clamp(sw.w + dx, minW, 1 - sw.x);
+      }
+    }
+
+    frameEditorState.win = normalizeFrameWindow(next);
+    updateWindowRectUI();
+  }
+
+  function onDragEnd() {
+    frameEditorState.dragging = null;
+    document.removeEventListener('pointermove', onDragMove);
+    document.removeEventListener('pointerup', onDragEnd);
+    document.removeEventListener('pointercancel', onDragEnd);
+  }
+
+  /* ============================================================
+     BACKGROUND JOB QUEUE
+     ============================================================ */
+  function enqueueJob(name, sourceDataUrl) {
+    var job = {
+      id: genId(),
+      name: name,
+      source: sourceDataUrl,
+      status: 'pending',
+      result: null,
+      error: null,
+      createdAt: Date.now()
+    };
+    state.jobs.push(job);
+    updateQueueUI();
+    renderJobs();
+    processQueue();
+    return job;
+  }
+
+  async function processQueue() {
+    if (state.processingJob) { return; }
+
+    var next = null;
+    for (var i = 0; i < state.jobs.length; i++) {
+      if (state.jobs[i].status === 'pending') { next = state.jobs[i]; break; }
+    }
+    if (!next) { updateQueueUI(); return; }
+
+    state.processingJob = next;
+    next.status = 'processing';
+    updateQueueUI();
+    renderJobs();
+
+    try {
+      var dataUrl = await callProvider({
+        imageDataUrl: next.source,
+        name: next.name,
+        settings: state.settings
+      });
+
+      if (!dataUrl || typeof dataUrl !== 'string' || dataUrl.indexOf('data:image') !== 0) {
+        throw new Error('Invalid image response from the API');
+      }
+
+      next.result = dataUrl;
+      next.status = 'done';
+      addHistory(next.name, next.source, dataUrl);
+      toast('Caricature ready for ' + next.name, 'ok');
+    } catch (err) {
+      next.status = 'error';
+      next.error = (err && err.message) || 'Generation failed';
+      toast('Failed for ' + next.name + ' — ' + next.error, 'err');
+    }
+
+    state.processingJob = null;
+    updateQueueUI();
+    renderJobs();
+
+    var hasPending = state.jobs.some(function (j) { return j.status === 'pending'; });
+    if (hasPending) { processQueue(); }
+  }
+
+  function countJobs() {
+    var pending = 0, processing = 0, done = 0, error = 0;
+    state.jobs.forEach(function (j) {
+      if (j.status === 'pending') { pending++; }
+      else if (j.status === 'processing') { processing++; }
+      else if (j.status === 'done') { done++; }
+      else if (j.status === 'error') { error++; }
+    });
+    return { pending: pending, processing: processing, done: done, error: error };
+  }
+
+  function updateQueueUI() {
+    var c = countJobs();
+    var total = c.pending + c.processing + c.done + c.error;
+
+    if (total === 0) { show(queueBar, false); return; }
+    show(queueBar, true);
+    queueBar.classList.remove('done', 'err');
+
+    if (c.processing > 0 || c.pending > 0) {
+      show(queueSpinner, true);
+      show(queueDot, false);
+      var active = c.processing + c.pending;
+      queueText.textContent = active === 1 ? 'Creating caricature…' : 'Creating ' + active + ' caricatures…';
+    } else if (c.error > 0 && c.done === 0) {
+      show(queueSpinner, false);
+      show(queueDot, true);
+      queueDot.classList.add('err');
+      queueBar.classList.add('err');
+      queueText.textContent = c.error + (c.error === 1 ? ' failed — tap to retry' : ' failed — tap to review');
+    } else if (c.done > 0) {
+      show(queueSpinner, false);
+      show(queueDot, true);
+      queueDot.classList.remove('err');
+      queueBar.classList.add('done');
+      queueText.textContent = c.done === 1 ? 'Caricature ready — tap to view' : c.done + ' caricatures ready — tap to view';
+    }
+  }
+
+  function renderJobs() {
+    if (!jobsList) { return; }
+    jobsList.innerHTML = '';
+
+    if (!state.jobs.length) { show(jobsEmpty, true); return; }
+    show(jobsEmpty, false);
+
+    state.jobs.forEach(function (job) {
+      var row = document.createElement('div');
+      row.className = 'job';
+
+      var thumb = document.createElement('img');
+      thumb.className = 'job-thumb';
+      thumb.alt = '';
+      thumb.src = job.result || job.source;
+
+      var info = document.createElement('div');
+      info.className = 'job-info';
+
+      var strong = document.createElement('strong');
+      strong.textContent = job.name;
+
+      var status = document.createElement('span');
+      if (job.status === 'pending') { status.textContent = 'Queued'; }
+      else if (job.status === 'processing') { status.textContent = 'Creating…'; }
+      else if (job.status === 'done') { status.textContent = 'Ready'; status.className = 'ok'; }
+      else if (job.status === 'error') { status.textContent = job.error || 'Failed'; status.className = 'err'; }
+
+      info.appendChild(strong);
+      info.appendChild(status);
+
+      var actionGroup = document.createElement('div');
+      actionGroup.className = 'job-actions';
+
+      if (job.status === 'done') {
+        var viewBtn = document.createElement('button');
+        viewBtn.type = 'button';
+        viewBtn.className = 'job-action primary';
+        viewBtn.textContent = 'View';
+        viewBtn.addEventListener('click', function () {
+          openResult(job.name, job.source, job.result);
+          closeQueueSheet();
+        });
+        actionGroup.appendChild(viewBtn);
+
+        var dlBtn = document.createElement('button');
+        dlBtn.type = 'button';
+        dlBtn.className = 'job-action';
+        dlBtn.textContent = 'Download';
+        dlBtn.addEventListener('click', function () { downloadJobResult(job); });
+        actionGroup.appendChild(dlBtn);
+      } else if (job.status === 'error') {
+        var retryBtn = document.createElement('button');
+        retryBtn.type = 'button';
+        retryBtn.className = 'job-action';
+        retryBtn.textContent = 'Retry';
+        retryBtn.addEventListener('click', function () {
+          job.status = 'pending';
+          job.error = null;
+          updateQueueUI();
+          renderJobs();
+          processQueue();
+        });
+        actionGroup.appendChild(retryBtn);
+      } else {
+        var vBtn = document.createElement('button');
+        vBtn.type = 'button';
+        vBtn.className = 'job-action';
+        vBtn.textContent = 'View';
+        vBtn.addEventListener('click', function () {
+          openResult(job.name, job.source, null);
+          closeQueueSheet();
+        });
+        actionGroup.appendChild(vBtn);
+      }
+
+      row.appendChild(thumb);
+      row.appendChild(info);
+      row.appendChild(actionGroup);
+      jobsList.appendChild(row);
+    });
+  }
+
+  function clearFinishedJobs() {
+    state.jobs = state.jobs.filter(function (j) {
+      return j.status === 'pending' || j.status === 'processing';
+    });
+    updateQueueUI();
+    renderJobs();
+  }
+
+  /* ============================================================
+     CREATION FLOW
+     ============================================================ */
+  function createCaricature() {
+    var name = String(guestName.value || '').trim();
+    if (!name) {
+      toast('Please enter the guest name');
+      try { guestName.focus(); } catch (e) { /* ignore */ }
+      return;
+    }
+    if (!state.captureDataUrl) { toast('Take a photo first'); return; }
+    if (!state.settings.apiKey) {
+      toast('Add your API key in Settings');
+      openSettings();
+      return;
+    }
+
+    var source = state.captureDataUrl;
+    enqueueJob(name, source);
+
+    state.captureDataUrl = null;
+    state.guestName = '';
+    frozen.removeAttribute('src');
+    guestName.value = '';
+
+    toast('Queued for ' + name, 'ok');
+    setMode('idle');
+    startCamera();
+  }
+
+  /* ============================================================
+     RESULT VIEW
+     ============================================================ */
+  async function openResult(name, sourceDataUrl, resultDataUrl) {
+    stopCamera();
+    state.guestName = name || '';
+    state.currentSource = sourceDataUrl || null;
+    state.currentResult = resultDataUrl || null;
+    state.currentFramed = null;
+    state.currentFramedSource = null;
+    state._frameCacheKey = null;
+
+    if (resultDataUrl) {
+      resultImg.src = resultDataUrl;
+      resultImg.alt = 'Caricature of ' + (name || 'guest');
+      resultImg.classList.remove('framed');
+      state.viewMode = FRAME_SIZES[state.settings.frameSize] ? 'framed' : 'raw';
+    } else if (sourceDataUrl) {
+      resultImg.src = sourceDataUrl;
+      resultImg.alt = 'Reference photo';
+      resultImg.classList.remove('framed');
+      state.viewMode = 'source';
+    }
+
+    if (sourceDataUrl && resultDataUrl) {
+      show(sourceToggle, true);
+      sourceToggle.textContent = 'View original photo';
+    } else {
+      show(sourceToggle, false);
+    }
+
+    show(frameStatus, false);
+    setMode('result');
+
+    if (resultDataUrl && FRAME_SIZES[state.settings.frameSize]) {
+      await refreshFramedView();
+    }
+  }
+
+  /* ============================================================
+     HISTORY
+     ============================================================ */
+  function makeThumb(dataUrl, maxWidth, cb) {
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var scale = Math.min(1, maxWidth / img.naturalWidth);
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        var ctx = c.getContext('2d');
+        ctx.fillStyle = '#0A0B0D';
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        cb(c.toDataURL('image/jpeg', 0.78));
+      } catch (e) { cb(null); }
+    };
+    img.onerror = function () { cb(null); };
+    img.src = dataUrl;
+  }
+
+  function addHistory(name, sourceDataUrl, resultDataUrl) {
+    makeThumb(sourceDataUrl, SOURCE_THUMB_WIDTH, function (srcThumb) {
+      makeThumb(resultDataUrl, THUMB_WIDTH, function (resThumb) {
+        if (!resThumb) { return; }
+        var item = {
+          id: genId(),
+          name: name,
+          source: srcThumb || null,
+          image: resThumb,
+          createdAt: Date.now()
+        };
+        state.history = [item].concat(state.history).slice(0, MAX_HISTORY);
+        persistHistory();
+        renderHistory();
+      });
+    });
+  }
+
+  function renderHistory() {
+    if (!histGrid) { return; }
+    histGrid.innerHTML = '';
+
+    if (!state.history.length) { show(histEmpty, true); return; }
+    show(histEmpty, false);
+
+    state.history.forEach(function (item) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'hist-item';
+      btn.setAttribute('aria-label', 'Open caricature for ' + item.name);
+
+      var img = document.createElement('img');
+      img.src = item.image;
+      img.alt = '';
+
+      var span = document.createElement('span');
+      span.textContent = item.name;
+
+      btn.appendChild(img);
+      btn.appendChild(span);
+      btn.addEventListener('click', function () { openHistoryItem(item); });
+      histGrid.appendChild(btn);
+    });
+  }
+
+  function openHistoryItem(item) {
+    openResult(item.name, item.source, item.image);
+  }
+
+  /* ============================================================
+     DOWNLOAD / PRINT
+     ============================================================ */
+  function currentDownloadUrl() {
+    if (state.viewMode === 'source' && state.currentSource) { return state.currentSource; }
+    if (state.viewMode === 'framed' && state.currentFramed) { return state.currentFramed; }
+    return state.currentResult;
+  }
+
+  function currentDownloadSuffix() {
+    if (state.viewMode === 'source') { return '-Original'; }
+    if (state.viewMode === 'framed' && state.currentFramed) {
+      var s = FRAME_SIZES[state.settings.frameSize];
+      return s ? '-' + s.label + '-Framed' : '-Framed';
+    }
+    return '';
+  }
+
+  function downloadResult() {
+    var url = currentDownloadUrl();
+    if (!url) { return; }
+    try {
+      var a = document.createElement('a');
+      a.href = url;
+      var ext = url.indexOf('data:image/jpeg') === 0 ? '.jpg' : '.png';
+      a.download = 'BTB-Caricature-' + sanitizeFilename(state.guestName) + currentDownloadSuffix() + ext;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      toast('Download failed in this browser', 'err');
+    }
+  }
+
+  async function downloadJobResult(job) {
+    if (!job.result) { return; }
+    var url = job.result;
+    var suffix = '';
+    if (FRAME_SIZES[state.settings.frameSize]) {
+      try {
+        var framed = await buildFramedImage(job.result, state.settings);
+        url = framed;
+        var s = FRAME_SIZES[state.settings.frameSize];
+        suffix = '-' + s.label + '-Framed';
+      } catch (e) { /* fall back to raw */ }
+    }
+    try {
+      var a = document.createElement('a');
+      a.href = url;
+      var ext = url.indexOf('data:image/jpeg') === 0 ? '.jpg' : '.png';
+      a.download = 'BTB-Caricature-' + sanitizeFilename(job.name) + suffix + ext;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      toast('Download failed in this browser', 'err');
+    }
+  }
+
+  function printResult() {
+    var url = currentDownloadUrl();
+    if (!url) { return; }
+    printImg.src = url;
+    var go = function () {
+      setTimeout(function () {
+        try { window.print(); } catch (e) { toast('Printing is not available', 'err'); }
+      }, 60);
+    };
+    if (printImg.complete && printImg.naturalWidth) { go(); }
+    else {
+      printImg.onload = go;
+      printImg.onerror = function () { toast('Could not prepare the print view', 'err'); };
+    }
+  }
+
+  /* ============================================================
+     STYLE REFERENCES UI
+     ============================================================ */
+  function renderStyleRefs() {
+    if (!refGrid) { return; }
+    refGrid.innerHTML = '';
+
+    var refs = state.styleRefs || [];
+    var max = MAX_STYLE_REFS;
+
+    refs.forEach(function (ref, i) {
+      var slot = document.createElement('div');
+      slot.className = 'ref-slot';
+      slot.setAttribute('role', 'group');
+      slot.setAttribute('aria-label', 'Style reference ' + (i + 1));
+
+      var img = document.createElement('img');
+      img.src = ref.image;
+      img.alt = '';
+      slot.appendChild(img);
+
+      var num = document.createElement('span');
+      num.className = 'ref-num';
+      num.textContent = String(i + 1);
+      slot.appendChild(num);
+
+      var rm = document.createElement('button');
+      rm.type = 'button';
+      rm.className = 'ref-slot remove-btn';
+      rm.setAttribute('aria-label', 'Remove style reference ' + (i + 1));
+      rm.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+      rm.addEventListener('click', function (e) {
+        e.stopPropagation();
+        removeStyleRef(ref.id);
+      });
+      slot.appendChild(rm);
+
+      refGrid.appendChild(slot);
+    });
+
+    if (refs.length < max) {
+      var add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'ref-slot add';
+      add.setAttribute('aria-label', 'Add style reference');
+      add.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+      add.addEventListener('click', function () { refFileInput.click(); });
+      refGrid.appendChild(add);
+    }
+
+    /* Fill remaining slots with placeholders so grid stays 5 wide */
+    var filled = refs.length + (refs.length < max ? 1 : 0);
+    for (var i = filled; i < max; i++) {
+      var ph = document.createElement('div');
+      ph.className = 'ref-slot';
+      ph.style.opacity = '0.25';
+      ph.setAttribute('aria-hidden', 'true');
+      refGrid.appendChild(ph);
+    }
+
+    refCountTag.textContent = refs.length + ' / ' + max;
+    show(refEmptyNote, refs.length === 0);
+  }
+
+  async function handleStyleRefUpload(files) {
+    if (!files || !files.length) { return; }
+    var remaining = MAX_STYLE_REFS - state.styleRefs.length;
+    if (remaining <= 0) {
+      toast('Maximum ' + MAX_STYLE_REFS + ' references', 'err');
+      return;
+    }
+
+    var added = 0;
+    for (var i = 0; i < files.length && added < remaining; i++) {
+      var file = files[i];
+      if (!file.type || file.type.indexOf('image/') !== 0) { continue; }
+      try {
+        var url = URL.createObjectURL(file);
+        var img = await loadImage(url);
+        var scale = Math.min(1, REF_MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
+        var w = Math.max(1, Math.round(img.naturalWidth * scale));
+        var h = Math.max(1, Math.round(img.naturalHeight * scale));
+
+        var c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        var ctx = c.getContext('2d');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+
+        var dataUrl = c.toDataURL('image/jpeg', 0.78);
+        state.styleRefs.push({ id: genId(), image: dataUrl });
+        added++;
+      } catch (e) { /* skip bad file */ }
+    }
+
+    if (added > 0) {
+      persistStyleRefs();
+      renderStyleRefs();
+      toast(added + ' reference' + (added === 1 ? '' : 's') + ' added', 'ok');
+    } else {
+      toast('No usable images selected', 'err');
+    }
+  }
+
+  function removeStyleRef(id) {
+    state.styleRefs = state.styleRefs.filter(function (r) { return r.id !== id; });
+    persistStyleRefs();
+    renderStyleRefs();
+  }
+
+  /* ============================================================
+     SETTINGS SHEET
+     ============================================================ */
+  function setStyleChips(style) {
+    var chips = styleChips.querySelectorAll('.chip');
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].setAttribute('aria-pressed', chips[i].getAttribute('data-style') === style ? 'true' : 'false');
+    }
+  }
+
+  function setChipsValue(container, attr, value) {
+    if (!container) { return; }
+    var chips = container.querySelectorAll('.chip');
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].setAttribute('aria-pressed', chips[i].getAttribute(attr) === value ? 'true' : 'false');
+    }
+  }
+
+  function getChipsValue(container, attr, fallback) {
+    if (!container) { return fallback; }
+    var active = container.querySelector('.chip[aria-pressed="true"]');
+    return active ? (active.getAttribute(attr) || fallback) : fallback;
+  }
+
+  function updateFrameFieldVisibility() {
+    var frameSize = getChipsValue(frameSizeChips, 'data-frame', 'none');
+    var enabled = frameSize !== 'none';
+    show(frameUploadField, enabled);
+  }
+
+  function updateFramePreview() {
+    if (state.settings.frameImage) {
+      frameThumb.src = state.settings.frameImage;
+      var bytes = dataUrlBytes(state.settings.frameImage);
+      frameFileName.textContent = 'Custom frame';
+      frameFileSize.textContent = formatBytes(bytes) + ' · PNG';
+      show(framePreview, true);
+      show(uploadFrameBtn, false);
+    } else {
+      frameThumb.removeAttribute('src');
+      show(framePreview, false);
+      show(uploadFrameBtn, true);
+    }
+  }
+
+  function fillSettingsForm() {
+    var s = state.settings;
+    setProvider.value = s.provider || 'openai';
+    setKey.value = s.apiKey || '';
+    setModel.value = s.model || '';
+    setEndpoint.value = s.endpoint || '';
+    setQuality.value = s.quality || 'auto';
+    setExtra.value = s.extra || '';
+    setStyleChips(s.style || 'classic');
+    setChipsValue(frameSizeChips, 'data-frame', s.frameSize || 'none');
+    updateFrameFieldVisibility();
+    updateFramePreview();
+    renderStyleRefs();
+  }
+
+  function readSettingsForm() {
+    return {
+      provider: setProvider.value || 'openai',
+      apiKey: String(setKey.value || '').trim(),
+      model: String(setModel.value || '').trim() || 'gpt-image-1',
+      endpoint: String(setEndpoint.value || '').trim() || 'https://api.openai.com/v1',
+      quality: setQuality.value || 'auto',
+      style: getChipsValue(styleChips, 'data-style', 'classic'),
+      extra: String(setExtra.value || '').trim(),
+      frameSize: getChipsValue(frameSizeChips, 'data-frame', 'none'),
+      frameImage: state.settings.frameImage || '',
+      frameWindow: normalizeFrameWindow(state.settings.frameWindow)
+    };
+  }
+
+  function openSettings() {
+    fillSettingsForm();
+    show(backdrop, true);
+    show(sheet, true);
+    document.body.style.overflow = 'hidden';
+    try { closeBtn.focus(); } catch (e) { /* ignore */ }
+  }
+
+  function closeSettings() {
+    show(sheet, false);
+    if (queueSheet.hidden) { show(backdrop, false); }
+    document.body.style.overflow = '';
+  }
+
+  async function saveSettings() {
+    var before = {
+      frameSize: state.settings.frameSize,
+      frameWindow: JSON.stringify(state.settings.frameWindow),
+      frameImage: state.settings.frameImage
+    };
+
+    state.settings = readSettingsForm();
+    persistSettings();
+    closeSettings();
+    toast('Settings saved', 'ok');
+
+    if (state.mode === 'result' && state.currentResult) {
+      var changed =
+        before.frameSize !== state.settings.frameSize ||
+        before.frameWindow !== JSON.stringify(state.settings.frameWindow) ||
+        before.frameImage !== state.settings.frameImage;
+
+      if (changed) {
+        state._frameCacheKey = null;
+        state.currentFramed = null;
+        state.currentFramedSource = null;
+        state.viewMode = FRAME_SIZES[state.settings.frameSize] ? 'framed' : 'raw';
+        await refreshFramedView();
+      }
+    }
+  }
+
+  async function testApi() {
+    var s = readSettingsForm();
+    if (!s.apiKey) { toast('Enter an API key first', 'err'); return; }
+    testBtn.disabled = true;
+    var original = testBtn.textContent;
+    testBtn.textContent = 'Testing…';
+
+    try {
+      var res = await fetch(resolveModelsUrl(s), {
+        method: 'GET',
+        headers: { Authorization: 'Bearer ' + s.apiKey }
+      });
+      if (res.ok) { toast('API connection successful', 'ok'); }
+      else if (res.status === 401) { toast('Invalid API key', 'err'); }
+      else {
+        var t = '';
+        try { t = await res.text(); } catch (e) { t = ''; }
+        var d = extractApiMessage(t);
+        toast('API error ' + res.status + (d ? ' — ' + d : ''), 'err');
+      }
+    } catch (e) {
+      toast('Network error — check the endpoint', 'err');
+    } finally {
+      testBtn.disabled = false;
+      testBtn.textContent = original;
+    }
+  }
+
+  async function handleFrameUpload(file) {
+    if (!file.type || file.type.indexOf('image/') !== 0) {
+      toast('Please choose an image file', 'err');
+      return;
+    }
+
+    var url = null;
+    try {
+      url = URL.createObjectURL(file);
+      var img = await loadImage(url);
+
+      var scale = Math.min(1, FRAME_MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
+      var w = Math.max(1, Math.round(img.naturalWidth * scale));
+      var h = Math.max(1, Math.round(img.naturalHeight * scale));
+
+      var c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      var ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+
+      var dataUrl = c.toDataURL('image/png');
+
+      var detected = null;
+      try {
+        var compressedImg = await loadImage(dataUrl);
+        detected = detectFrameWindowFromImage(compressedImg);
+      } catch (e) { detected = null; }
+
+      state.settings.frameImage = dataUrl;
+      state.settings.frameWindow = detected || Object.assign({}, DEFAULT_FRAME_WINDOW);
+
+      updateFramePreview();
+
+      if (detected) { toast('Frame uploaded · area detected', 'ok'); }
+      else { toast('Frame uploaded — please mark the photo area', 'ok'); }
+
+      await openFrameEditor();
+    } catch (e) {
+      toast('Could not read that image', 'err');
+    } finally {
+      if (url) { URL.revokeObjectURL(url); }
+    }
+  }
+
+  /* ============================================================
+     QUEUE SHEET
+     ============================================================ */
+  function openQueueSheet() {
+    renderJobs();
+    show(backdrop, true);
+    show(queueSheet, true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeQueueSheet() {
+    show(queueSheet, false);
+    if (sheet.hidden && frameEditor.hidden) { show(backdrop, false); }
+    document.body.style.overflow = '';
+  }
+
+  /* ============================================================
+     EVENT WIRING
+     ============================================================ */
+  shutterBtn.addEventListener('click', async function () {
+    if (state.mode === 'idle') { await startCamera(); }
+    else if (state.mode === 'live') { await captureFromVideo(); }
+    else if (state.mode === 'result') { await newGuest(); }
+  });
+
+  resetBtn.addEventListener('click', function () { resetAll(); });
+  galleryBtn.addEventListener('click', function () { fileInput.click(); });
+
+  fileInput.addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (file) { useUploadedFile(file); }
+  });
+
+  flashBtn.addEventListener('click', toggleFlash);
+  flipBtn.addEventListener('click', cycleCamera);
+  createBtn.addEventListener('click', createCaricature);
+
+  guestName.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); createCaricature(); }
+  });
+
+  downloadBtn.addEventListener('click', downloadResult);
+  printBtn.addEventListener('click', printResult);
+  sourceToggle.addEventListener('click', toggleSourceView);
+
+  settingsBtn.addEventListener('click', openSettings);
+  closeBtn.addEventListener('click', closeSettings);
+  saveBtn.addEventListener('click', saveSettings);
+  testBtn.addEventListener('click', testApi);
+
+  /* Style references */
+  refFileInput.addEventListener('change', function (e) {
+    var files = e.target.files ? Array.prototype.slice.call(e.target.files) : [];
+    e.target.value = '';
+    if (files.length) { handleStyleRefUpload(files); }
+  });
+
+  /* Frame size chips */
+  frameSizeChips.addEventListener('click', function (e) {
+    var chip = e.target.closest ? e.target.closest('.chip') : null;
+    if (!chip) { return; }
+    setChipsValue(frameSizeChips, 'data-frame', chip.getAttribute('data-frame'));
+    updateFrameFieldVisibility();
+  });
+
+  /* Frame upload */
+  uploadFrameBtn.addEventListener('click', function () { frameFileInput.click(); });
+
+  frameFileInput.addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (file) { handleFrameUpload(file); }
+  });
+
+  adjustFrameBtn.addEventListener('click', function () { openFrameEditor(); });
+
+  removeFrameBtn.addEventListener('click', function () {
+    state.settings.frameImage = '';
+    state.settings.frameWindow = Object.assign({}, DEFAULT_FRAME_WINDOW);
+    updateFramePreview();
+  });
+
+  /* Frame editor */
+  frameEditorClose.addEventListener('click', function () {
+    state.settings.frameWindow = normalizeFrameWindow(frameEditorState.win);
+    updateFramePreview();
+    closeFrameEditor(false);
+  });
+
+  frameEditorReset.addEventListener('click', autoDetectFrameWindow);
+
+  frameEditorSave.addEventListener('click', function () {
+    state.settings.frameWindow = normalizeFrameWindow(frameEditorState.win);
+    closeFrameEditor(false);
+    toast('Photo area saved', 'ok');
+  });
+
+  window.addEventListener('resize', function () {
+    if (!frameEditor.hidden) { layoutFrameEditor(); }
+  });
+
+  setupFrameEditorInteractions();
+
+  /* Queue */
+  queueBar.addEventListener('click', function () {
+    var c = countJobs();
+    var total = c.pending + c.processing + c.done + c.error;
+    if (total === 1 && c.done === 1) {
+      var doneJob = state.jobs.filter(function (j) { return j.status === 'done'; })[0];
+      if (doneJob) {
+        openResult(doneJob.name, doneJob.source, doneJob.result);
+        return;
+      }
+    }
+    openQueueSheet();
+  });
+
+  closeQueue.addEventListener('click', closeQueueSheet);
+  closeQueueBtn.addEventListener('click', closeQueueSheet);
+  clearQueue.addEventListener('click', clearFinishedJobs);
+
+  backdrop.addEventListener('click', function () {
+    if (!sheet.hidden) { closeSettings(); }
+    if (!queueSheet.hidden) { closeQueueSheet(); }
+  });
+
+  styleChips.addEventListener('click', function (e) {
+    var chip = e.target.closest ? e.target.closest('.chip') : null;
+    if (!chip) { return; }
+    setStyleChips(chip.getAttribute('data-style'));
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (!sheet.hidden) { closeSettings(); }
+      else if (!queueSheet.hidden) { closeQueueSheet(); }
+    }
+  });
+
+  window.addEventListener('pagehide', stopCamera);
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && state.mode === 'live') {
+      try { video.pause(); } catch (e) { /* ignore */ }
+    } else if (!document.hidden && state.mode === 'live') {
+      try { video.play(); } catch (e) { /* ignore */ }
+    }
+  });
+
+  /* ============================================================
+     INIT
+     ============================================================ */
+  function init() {
+    loadSettings();
+    loadHistory();
+    loadStyleRefs();
+    renderHistory();
+    renderStyleRefs();
+    setMode('idle');
+    updateQueueUI();
+    renderJobs();
+    updateFramePreview();
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast('Camera is not supported in this browser', 'err');
+    }
+
+    try {
+      localStorage.setItem('btb.probe', '1');
+      localStorage.removeItem('btb.probe');
+    } catch (e) {
+      toast('Private mode detected — settings will not persist', 'err');
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
