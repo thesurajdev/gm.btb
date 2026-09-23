@@ -697,10 +697,10 @@ select{
 
     <div class="field">
       <label class="field-label">
-        <span>Style references</span>
+        <span>Design &amp; style references</span>
         <span class="tag" id="refCountTag">0 / 5</span>
       </label>
-      <p class="hint">Upload up to 5 caricature examples. The AI will match their artistic style while keeping the guest's identity.</p>
+      <p class="hint">Upload up to 5 complete caricature samples. When provided, the AI copies the <strong>exact design, props, costume, pose and background</strong> from the reference — while keeping the guest's face and identity from the photo.</p>
       <div class="ref-grid" id="refGrid"></div>
       <p class="ref-empty-note" id="refEmptyNote">No references yet. Tap + to upload a sample caricature.</p>
       <input type="file" id="refFileInput" accept="image/*" hidden multiple>
@@ -837,6 +837,10 @@ select{
   var FRAME_MAX_DIM = 1200;
   var MAX_STYLE_REFS = 5;
   var REF_MAX_DIM = 640;
+
+  /* Default WhatsApp country prefix — kept until user changes it */
+  var PHONE_PREFIX = '+91 ';
+  var MIN_PHONE_DIGITS = 8;
 
   var FRAME_SIZES = {
     none: null,
@@ -996,7 +1000,17 @@ select{
   }
   function isValidPhone(phone) {
     var d = sanitizePhoneForWa(phone);
-    return d.length >= 8 && d.length <= 15;
+    return d.length >= MIN_PHONE_DIGITS && d.length <= 15;
+  }
+  function getRealPhone() {
+    /* Returns the raw phone value only if it has real digits beyond the prefix */
+    var raw = String(guestPhone.value || '').trim();
+    var digits = sanitizePhoneForWa(raw);
+    return digits.length >= MIN_PHONE_DIGITS ? raw : '';
+  }
+  function ensurePhonePrefix() {
+    var v = String(guestPhone.value || '').trim();
+    if (!v) { guestPhone.value = PHONE_PREFIX; }
   }
 
   function loadSettings() {
@@ -1339,7 +1353,7 @@ select{
     if (useScreenFlash) await screenFlashOff();
 
     guestName.value = '';
-    guestPhone.value = '';
+    guestPhone.value = PHONE_PREFIX;
     updatePhoneHint();
     setMode('captured');
     setTimeout(function () { try { guestName.focus(); } catch (e) {} }, 120);
@@ -1359,7 +1373,7 @@ select{
       frozen.src = state.captureDataUrl;
       stopCamera();
       guestName.value = '';
-      guestPhone.value = '';
+      guestPhone.value = PHONE_PREFIX;
       updatePhoneHint();
       setMode('captured');
     } catch (e) {
@@ -1413,7 +1427,7 @@ select{
     resultImg.removeAttribute('src');
     resultImg.alt = '';
     guestName.value = '';
-    guestPhone.value = '';
+    guestPhone.value = PHONE_PREFIX;
     updatePhoneHint();
     show(sourceToggle, false);
     show(frameStatus, false);
@@ -1423,59 +1437,111 @@ select{
 
   async function newGuest() { resetAll(); await startCamera(); }
 
+  /* ============================================================
+     PROMPT BUILDER
+     - No references: identity lock only, artistic style from preset
+     - With references: COPY the entire design (props, costume, pose,
+       background, composition) from the references, but keep the
+       guest's face and identity from the source photo
+     ============================================================ */
   function buildPrompt(settings, refCount) {
     var styleLine = STYLE_PROMPTS[settings.style] || STYLE_PROMPTS.classic;
     var hasRefs = refCount > 0;
     var parts = [];
 
     if (hasRefs) {
+      /* --- REFERENCE-DRIVEN MODE: copy design, keep identity --- */
       parts.push(
         'You are given MULTIPLE images.',
         '',
-        'IMAGE 1 — SOURCE PHOTO: the exact guest to caricature. This is the ONLY real person in the output.',
+        'IMAGE 1 — SOURCE PHOTO: the exact real guest. This is the ONLY person to depict.',
         '',
-        'IMAGES 2' + (refCount > 1 ? ('–' + (refCount + 1)) : '') + ' — STYLE REFERENCES: caricature examples showing the artistic style to emulate — drawing technique, line weight, exaggeration level, colour palette, mood, background treatment.',
+        'IMAGES 2' + (refCount > 1 ? (' to ' + (refCount + 1)) : '') + ' — DESIGN & STYLE REFERENCES: complete caricature artworks that define the EXACT design, props, costume, pose, background, artistic style and overall composition to reproduce.',
         '',
-        'CRITICAL RULE FOR STYLE REFERENCES:',
-        'DO NOT copy any face, identity, hairstyle, skin tone, gender, age, clothing, jewellery or specific facial feature from the reference images. Use them ONLY to understand the artistic STYLE.',
-        'The subject in the output MUST be the guest from IMAGE 1, rendered in the style shown by the reference images.',
-        ''
+        'YOUR TASK: recreate the reference design as a caricature of the guest from IMAGE 1.',
+        'Think of it as: the guest has been drawn INTO the same scene shown in the reference — same props, same costume, same background, same pose, same artistic style — but the face and identity must belong to the guest from IMAGE 1.',
+        '',
+        '━━ IDENTITY — LOCKED TO IMAGE 1 ━━',
+        'The output face MUST clearly be the same person as IMAGE 1. Preserve exactly:',
+        '- face shape, eyes, eyebrows, nose, lips, ears',
+        '- skin tone, hair colour, hairstyle, hairline',
+        '- facial hair, apparent age, gender, ethnicity',
+        '- distinctive facial characteristics of the guest',
+        '',
+        '━━ DESIGN — COPIED FROM THE REFERENCES ━━',
+        'Reproduce the reference design AS-IS, including:',
+        '- ALL props and accessories shown (party hat, balloons, confetti, sunglasses, hats, musical instruments, sports equipment, food, animals, speech bubbles, decorative elements, etc.)',
+        '- the costume / clothing style shown in the reference',
+        '- the exact background scene (studio backdrop, sky, beach, urban, festive, colours, patterns, graphics)',
+        '- the exact pose and gesture (waving, thumbs-up, holding a prop, hands on hips, etc.)',
+        '- the composition, framing and camera angle',
+        '- the artistic style: line weight, colour palette, shading technique, exaggeration level, mood',
+        '- any cute / funny / playful visual gags present in the reference',
+        '',
+        'MANDATORY DESIGN RULES:',
+        '- If the reference shows a party hat, the output MUST include the same party hat (same colour and style).',
+        '- If the reference shows a specific background, the output MUST use that same background.',
+        '- If the reference shows a specific pose, the output MUST use that same pose.',
+        '- If the reference shows a costume or outfit, the guest MUST wear that same costume.',
+        '- If the reference shows props (balloons, animals, objects), those same props MUST appear.',
+        '- If multiple references are supplied, blend their designs into one coherent scene, prioritising the most prominent design elements.',
+        '',
+        'DO NOT:',
+        '- copy the face, hairstyle, skin tone, gender, age or ethnicity of any person visible in the reference images',
+        '- substitute the guest with the reference person',
+        '- add additional people or faces beyond the guest',
+        '- invent props that do not appear in the reference',
+        '',
+        'CARICATURE ENERGY — even when following the reference design, keep the classic caricature feel:',
+        '- exaggerated but lovable, slightly larger head, playful expression',
+        '- oversized grin, twinkling eyes, expressive eyebrows',
+        '- cute, friendly, warm, funny — never mean',
+        '',
+        'COMPOSITION LOCK:',
+        '- one person only',
+        '- complete head, hair, ears, chin, both sides of the face and shoulders inside the portrait 3:4 frame',
+        '- do not crop the subject',
+        '- leave generous padding',
+        '',
+        'The final image must look like the guest was photographed in the same caricature booth as the reference artwork — same design, same world, same artist.',
+        'No text. No watermark. No extra people. No extra face. High-resolution print quality.'
+      );
+    } else {
+      /* --- NO REFERENCES: standard identity-locked caricature --- */
+      parts.push(
+        'Create a FUNNY, CUTE and FAITHFUL caricature of THE EXACT PERSON in the source photo.',
+        'The source photo is the source of truth for identity. The output must be unmistakably the same person, just exaggerated for comedy.',
+        '',
+        'IDENTITY LOCK — preserve exactly:',
+        '- exact face shape', '- eyes, eyebrows, nose, lips, ears', '- skin tone',
+        '- hairstyle and hairline', '- facial hair', '- apparent age and gender',
+        '- clothing and clothing colours', '- distinctive facial characteristics',
+        '',
+        'Do NOT:',
+        '- invent or substitute a different person', '- create a generic face',
+        '- beautify the person into someone else', '- change gender, age, hairstyle or clothing',
+        '- add another person or another face',
+        '',
+        'TRANSFORMATION LOCK — the supplied person must remain the same person. Only the artistic rendering may change.',
+        '',
+        'CARICATURE ENERGY — the output MUST feel like a real hand-drawn event caricature:',
+        '- exaggerate the most distinctive features in a flattering, funny way',
+        '- slightly larger head, smaller body — classic caricature proportions',
+        '- oversized smile, sparkling eyes, expressive eyebrows, playful posture',
+        '- if the guest has a signature feature (big nose, curly hair, big ears, beard, glasses, strong chin), exaggerate it in a loving, funny way',
+        '- cute, friendly, warm, approachable — the guest should laugh and love it. NEVER mean, scary or unflattering.',
+        '- vibrant colours, clean bold outlines, cheerful background',
+        '',
+        styleLine,
+        '',
+        'COMPOSITION LOCK — one person only. Keep the complete head, hair, ears, chin, both sides of the face and shoulders inside the portrait 3:4 frame.',
+        'Do NOT crop the subject. Do NOT cut off hair, forehead, ears or chin. Leave generous padding.',
+        'If the source is a close-up, extend the background instead of cropping the subject.',
+        '',
+        'The final image must look like a professionally hand-created event caricature of this exact guest.',
+        'No text. No watermark. No extra people. No extra face. High-resolution print quality.'
       );
     }
-
-    parts.push(
-      'Create a FUNNY, CUTE and FAITHFUL caricature of THE EXACT PERSON in the source photo.',
-      'The source photo is the source of truth for identity. The output must be unmistakably the same person, just exaggerated for comedy.',
-      '',
-      'IDENTITY LOCK — preserve exactly:',
-      '- exact face shape', '- eyes, eyebrows, nose, lips, ears', '- skin tone',
-      '- hairstyle and hairline', '- facial hair', '- apparent age and gender',
-      '- clothing and clothing colours', '- distinctive facial characteristics',
-      '',
-      'Do NOT:',
-      '- invent or substitute a different person', '- create a generic face',
-      '- beautify the person into someone else', '- change gender, age, hairstyle or clothing',
-      '- add another person or another face',
-      '',
-      'TRANSFORMATION LOCK — the supplied person must remain the same person. Only the artistic rendering may change.',
-      '',
-      'CARICATURE ENERGY — the output MUST feel like a real hand-drawn event caricature:',
-      '- exaggerate the most distinctive features in a flattering, funny way',
-      '- slightly larger head, smaller body — classic caricature proportions',
-      '- oversized smile, sparkling eyes, expressive eyebrows, playful posture',
-      '- if the guest has a signature feature (big nose, curly hair, big ears, beard, glasses, strong chin), exaggerate it in a loving, funny way',
-      '- cute, friendly, warm, approachable — the guest should laugh and love it. NEVER mean, scary or unflattering.',
-      '- vibrant colours, clean bold outlines, cheerful background',
-      '',
-      styleLine,
-      '',
-      'COMPOSITION LOCK — one person only. Keep the complete head, hair, ears, chin, both sides of the face and shoulders inside the portrait 3:4 frame.',
-      'Do NOT crop the subject. Do NOT cut off hair, forehead, ears or chin. Leave generous padding.',
-      'If the source is a close-up, extend the background instead of cropping the subject.',
-      '',
-      'The final image must look like a professionally hand-created event caricature of this exact guest.',
-      'No text. No watermark. No extra people. No extra face. High-resolution print quality.'
-    );
 
     if (settings.extra && String(settings.extra).trim()) {
       parts.push('');
@@ -1521,7 +1587,7 @@ select{
       for (var i = 0; i < refs.length; i++) {
         try {
           var refBlob = await dataUrlToBlob(refs[i].image);
-          form.append('image[]', refBlob, 'style-ref-' + (i + 1) + '.png');
+          form.append('image[]', refBlob, 'design-ref-' + (i + 1) + '.png');
         } catch (e) {}
       }
     }
@@ -2115,7 +2181,7 @@ select{
 
   function createCaricature() {
     var name = String(guestName.value || '').trim();
-    var phone = String(guestPhone.value || '').trim();
+    var phone = getRealPhone(); /* Empty if only prefix present */
 
     if (!name) {
       toast('Please enter the guest name');
@@ -2138,7 +2204,7 @@ select{
     state.guestPhone = '';
     frozen.removeAttribute('src');
     guestName.value = '';
-    guestPhone.value = '';
+    guestPhone.value = PHONE_PREFIX;
     updatePhoneHint();
 
     toast('Queued for ' + name, 'ok');
@@ -2319,13 +2385,13 @@ select{
   }
 
   function updatePhoneHint() {
-    var phone = String(guestPhone.value || '').trim();
-    if (!phone) {
+    var digits = sanitizePhoneForWa(guestPhone.value);
+    if (!digits || digits.length <= 3) {
       phoneHint.textContent = 'Include country code (e.g. +91). Used only to send the caricature on WhatsApp.';
       phoneHint.className = 'hint';
       return;
     }
-    if (isValidPhone(phone)) {
+    if (isValidPhone(guestPhone.value)) {
       phoneHint.textContent = 'Valid WhatsApp number · will receive the caricature';
       phoneHint.className = 'hint ok';
     } else {
@@ -2336,8 +2402,7 @@ select{
 
   function updateWhatsAppButton() {
     if (!whatsappBtn) return;
-    var phone = String(state.guestPhone || '').trim();
-    var hasNumber = isValidPhone(phone);
+    var hasNumber = isValidPhone(state.guestPhone);
     var hasResult = !!state.currentResult;
     show(whatsappBtn, hasNumber && hasResult);
   }
@@ -2352,13 +2417,6 @@ select{
     ].join('\n');
   }
 
-  /* ============================================================
-     FIXED: shareOnWhatsApp
-     - No more navigator.share() — that opens the OS share sheet
-       which shows all WhatsApp contacts.
-     - Instead: download the image, then open wa.me/<phone> which
-       targets the SPECIFIC number directly.
-     ============================================================ */
   async function shareOnWhatsApp() {
     var phone = sanitizePhoneForWa(state.guestPhone);
     if (!phone) { toast('No WhatsApp number for this guest', 'err'); return; }
@@ -2381,18 +2439,14 @@ select{
       return;
     }
 
-    /* Step 2 — Open WhatsApp chat with the SPECIFIC number.
-       wa.me/<number> opens WhatsApp (app or web) directly on that chat.
-       The message is prefilled; the operator attaches the saved image. */
+    /* Step 2 — Open WhatsApp chat with the SPECIFIC number */
     var waUrl = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);
-
     toast('Image saved · opening WhatsApp for +' + phone, 'ok');
 
     setTimeout(function () {
-      try {
-        window.location.href = waUrl;
-      } catch (e) {
-        try { window.open(waUrl, '_blank', 'noopener'); } catch (e2) { /* ignore */ }
+      try { window.location.href = waUrl; }
+      catch (e) {
+        try { window.open(waUrl, '_blank', 'noopener'); } catch (e2) {}
       }
     }, 500);
   }
@@ -2407,7 +2461,7 @@ select{
       var slot = document.createElement('div');
       slot.className = 'ref-slot';
       slot.setAttribute('role', 'group');
-      slot.setAttribute('aria-label', 'Style reference ' + (i + 1));
+      slot.setAttribute('aria-label', 'Design reference ' + (i + 1));
 
       var img = document.createElement('img');
       img.src = ref.image;
@@ -2422,7 +2476,7 @@ select{
       var rm = document.createElement('button');
       rm.type = 'button';
       rm.className = 'ref-slot remove-btn';
-      rm.setAttribute('aria-label', 'Remove style reference ' + (i + 1));
+      rm.setAttribute('aria-label', 'Remove design reference ' + (i + 1));
       rm.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
       rm.addEventListener('click', function (e) { e.stopPropagation(); removeStyleRef(ref.id); });
       slot.appendChild(rm);
@@ -2434,7 +2488,7 @@ select{
       var add = document.createElement('button');
       add.type = 'button';
       add.className = 'ref-slot add';
-      add.setAttribute('aria-label', 'Add style reference');
+      add.setAttribute('aria-label', 'Add design reference');
       add.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
       add.addEventListener('click', function () { refFileInput.click(); });
       refGrid.appendChild(add);
@@ -2711,6 +2765,11 @@ select{
 
   guestPhone.addEventListener('input', updatePhoneHint);
 
+  guestPhone.addEventListener('blur', function () {
+    ensurePhonePrefix();
+    updatePhoneHint();
+  });
+
   guestPhone.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') { e.preventDefault(); createCaricature(); }
   });
@@ -2829,6 +2888,7 @@ select{
     updateQueueUI();
     renderJobs();
     updateFramePreview();
+    guestPhone.value = PHONE_PREFIX;
     updatePhoneHint();
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
