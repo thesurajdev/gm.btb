@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b0b0c">
+<meta name="description" content="Born To Banger — interactive digital experiences for events, celebrations and creative moments.">
+<title>Born To Banger — Digital Experiences</title>
+<style>
+:root{
+  --bg:#09090a; --card:#111113; --text:#f6f4ef; --muted:#9b9b9f;
+  --line:rgba(255,255,255,.10); --white:#fff;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  overflow-x:hidden;
+}
+a{color:inherit;text-decoration:none}
+.noise{position:fixed;inset:0;pointer-events:none;opacity:.035;z-index:20;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.glow{position:absolute;width:600px;height:600px;border-radius:50%;filter:blur(100px);opacity:.18;pointer-events:none}
+.g1{background:#7c3aed;top:-320px;left:-220px}.g2{background:#ff4d6d;right:-280px;top:120px}.g3{background:#06b6d4;left:30%;bottom:-450px}
+.nav{
+  width:min(1180px,calc(100% - 40px));margin:auto;padding:22px 0;
+  display:flex;align-items:center;justify-content:space-between;position:relative;z-index:3
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.03em}
+.logo{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,#fff,#777);display:grid;place-items:center;color:#09090a;font-size:14px}
+.nav-pill{font-size:13px;color:#b8b8bd;border:1px solid var(--line);padding:9px 14px;border-radius:999px;background:rgba(255,255,255,.035)}
+.hero{width:min(1180px,calc(100% - 40px));margin:auto;min-height:690px;display:flex;align-items:center;position:relative}
+.hero-inner{max-width:850px;position:relative;z-index:2;padding:70px 0 90px}
+.eyebrow{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:999px;padding:8px 12px;font-size:12px;color:#c9c9cc}
+.dot{width:7px;height:7px;border-radius:50%;background:#65f5b5;box-shadow:0 0 16px #65f5b5}
+h1{font-size:clamp(58px,9vw,118px);line-height:.86;letter-spacing:-.075em;margin:26px 0}
+h1 span{display:block;color:#85858a}
+.hero p{max-width:620px;color:#a8a8ad;font-size:18px;line-height:1.65;margin:0 0 30px}
+.actions{display:flex;gap:12px;flex-wrap:wrap}
+.btn{padding:13px 18px;border-radius:13px;border:1px solid var(--line);font-weight:700;font-size:14px;transition:.25s}
+.btn.primary{background:#f4f2ec;color:#0a0a0b;border-color:#f4f2ec}
+.btn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.28)}
+.section{width:min(1180px,calc(100% - 40px));margin:auto;padding:70px 0}
+.section-head{display:flex;justify-content:space-between;align-items:end;gap:30px;margin-bottom:25px}
+.kicker{text-transform:uppercase;letter-spacing:.15em;font-size:11px;color:#77777c}
+h2{font-size:clamp(34px,5vw,58px);line-height:.95;letter-spacing:-.055em;margin:9px 0 0}
+.section-head p{color:#7f7f84;max-width:330px;font-size:14px;line-height:1.6;margin:0}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{
+  min-height:420px;border:1px solid var(--line);border-radius:26px;padding:25px;
+  background:linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.025));
+  position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;
+  transition:.35s;isolation:isolate
+}
+.card:before{content:"";position:absolute;width:260px;height:260px;border-radius:50%;filter:blur(50px);opacity:.25;right:-90px;top:-90px;z-index:-1}
+.card.ai:before{background:#a855f7}.card.art:before{background:#f59e0b}.card.room:before{background:#06b6d4}
+.card:hover{transform:translateY(-6px);border-color:rgba(255,255,255,.22)}
+.icon{width:54px;height:54px;border:1px solid var(--line);border-radius:16px;display:grid;place-items:center;font-size:24px;background:rgba(0,0,0,.18)}
+.num{font-size:11px;color:#6d6d72;letter-spacing:.12em}
+.card h3{font-size:29px;letter-spacing:-.045em;margin:14px 0 8px}
+.card p{color:#8e8e93;font-size:14px;line-height:1.55;max-width:290px}
+.card-link{display:flex;justify-content:space-between;align-items:center;margin-top:20px;font-size:13px;font-weight:800}
+.arrow{width:36px;height:36px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center}
+.manifesto{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:90px 0}
+.manifesto p{font-size:clamp(35px,5vw,68px);line-height:1.02;letter-spacing:-.06em;max-width:1050px;margin:0}
+.manifesto em{font-style:normal;color:#77777c}
+.soon{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
+.panel{border:1px solid var(--line);border-radius:26px;padding:30px;min-height:260px;background:#0e0e10}
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px}
+.tag{border:1px solid var(--line);border-radius:999px;padding:8px 11px;color:#99999e;font-size:12px}
+footer{width:min(1180px,calc(100% - 40px));margin:auto;padding:35px 0 45px;display:flex;justify-content:space-between;gap:20px;color:#66666b;font-size:12px;border-top:1px solid var(--line)}
+@media(max-width:800px){
+ .hero{min-height:620px}.grid,.soon{grid-template-columns:1fr}
+ .card{min-height:340px}.section-head{display:block}.section-head p{margin-top:16px}
+ h1{font-size:clamp(54px,16vw,90px)}
+}
+@media(max-width:520px){
+ .nav,.hero,.section,footer{width:min(100% - 28px,1180px)}
+ .hero-inner{padding:60px 0}.hero p{font-size:16px}
+ .section{padding:52px 0}.manifesto{padding:65px 0}
+ footer{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div>
+
+<header class="nav">
+  <a class="brand" href="/">
+    <span class="logo">BTB</span>
+    <span>Born To Banger</span>
+  </a>
+  <span class="nav-pill">Digital Experiences</span>
+</header>
+
+<main>
+<section class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow"><span class="dot"></span> Built for moments worth remembering</div>
+    <h1>CREATE.<span>PLAY.</span>EXPERIENCE.</h1>
+    <p>
+      A collection of interactive digital experiences by Born To Banger —
+      made for events, celebrations, artists and people who want something different.
+    </p>
+    <div class="actions">
+      <a class="btn primary" href="#experiences">Explore experiences ↓</a>
+      <a class="btn" href="https://www.borntobanger.in/" target="_blank" rel="noopener">Visit Born To Banger ↗</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="experiences">
+  <div class="section-head">
+    <div><div class="kicker">01 / Experiences</div><h2>Pick your experience.</h2></div>
+    <p>Three live tools. One creative playground. More experiences are on the way.</p>
+  </div>
+
+  <div class="grid">
+    <a class="card ai" href="/ai-caricature-studio">
+      <div><div class="num">01 — AI</div><div class="icon">✦</div></div>
+      <div>
+        <h3>AI Caricature Studio</h3>
+        <p>Turn a guest photo into a personalised caricature experience in seconds.</p>
+        <div class="card-link"><span>Launch Studio</span><span class="arrow">↗</span></div>
+      </div>
+    </a>
+
+    <a class="card art" href="/color-my-art">
+      <div><div class="num">02 — CREATE</div><div class="icon">✎</div></div>
+      <div>
+        <h3>Color My Art</h3>
+        <p>Choose a design, colour it your way and turn a simple drawing into your artwork.</p>
+        <div class="card-link"><span>Start Creating</span><span class="arrow">↗</span></div>
+      </div>
+    </a>
+
+    <a class="card room" href="/room">
+      <div><div class="num">03 — SOCIAL</div><div class="icon">◉</div></div>
+      <div>
+        <h3>Room</h3>
+        <p>A shared digital space built for watching, listening and experiencing together.</p>
+        <div class="card-link"><span>Enter Room</span><span class="arrow">↗</span></div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="manifesto">
+  <div class="section">
+    <div class="kicker">02 / The idea</div>
+    <p>We don't just organise experiences. <em>We build the digital layer that makes them memorable.</em></p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <div><div class="kicker">03 / What's next</div><h2>More is coming.</h2></div>
+    <p>New interactive tools are being built for the next generation of events.</p>
+  </div>
+  <div class="soon">
+    <div class="panel">
+      <div class="num">COMING SOON</div>
+      <h3 style="font-size:34px;letter-spacing:-.05em;margin:25px 0 0">More ways to make<br>events interactive.</h3>
+    </div>
+    <div class="panel">
+      <div class="num">THE PLAYGROUND</div>
+      <div class="tags">
+        <span class="tag">AI Experiences</span><span class="tag">Event Games</span>
+        <span class="tag">Creative Tools</span><span class="tag">Artist Experiences</span>
+        <span class="tag">Interactive Installations</span><span class="tag">Digital Gifting</span>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <span>© 2026 Born To Banger</span>
+  <span>Creative experiences for real-world moments.</span>
+</footer>
+</body>
+</html>
